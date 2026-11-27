@@ -9,8 +9,8 @@
 --   * 3 segments, 1 eligibility rule
 --   * Campaign "Suntec Year-End Spin" (active now → +60 days) with
 --       - Spin & Win wheel (8 segments, weights total 100%)
---       - Festive Scratch Card (4 outcomes)
---       - Suntec City Trivia quiz (6 questions)
+--       - Scratch & Win card (4 outcomes)
+--       - Quiz & Win (6 questions)
 --   * Campaign "Christmas Quiz Countdown" (scheduled, starts in 4 days)
 --   * Always-on Daily Check-in programme with a streak ladder (day 3/7/14/30)
 --   * 7 missions, 7 badges, 2 leaderboards, 9 notification templates, 3 QR codes
@@ -68,7 +68,7 @@ insert into public.rewards (id, category_id, campaign_id, key, type, name, descr
   ('12000000-0000-4000-8000-000000000004', '11000000-0000-4000-8000-000000000002', null, 'pp-100', 'capillary_points', '100 Suntec+ Points', 'Credited to your Suntec+ account', '{"points":100}', 0, false, null, null, null, 'once', 13),
   ('12000000-0000-4000-8000-000000000005', '11000000-0000-4000-8000-000000000002', null, 'pp-200', 'capillary_points', '200 Suntec+ Points', 'Credited to your Suntec+ account', '{"points":200}', 0, false, null, null, null, 'once', 14),
   -- Bonus attempt (game_id filled in after games exist)
-  ('12000000-0000-4000-8000-000000000006', '11000000-0000-4000-8000-000000000007', '20000000-0000-4000-8000-000000000001', 'bonus-spin', 'bonus_attempt', 'Bonus Spin', 'One extra spin on the Year-End Spin wheel', '{"count":1,"game_id":null}', 0, false, null, null, null, 'once', 20),
+  ('12000000-0000-4000-8000-000000000006', '11000000-0000-4000-8000-000000000007', '20000000-0000-4000-8000-000000000001', 'bonus-spin', 'bonus_attempt', 'Bonus Spin', 'One extra spin on Spin & Win', '{"count":1,"game_id":null}', 0, false, null, null, null, 'once', 20),
   -- Suntec+ loyalty points — awarded in Capillary via the LoyaltyAdapter
   ('12000000-0000-4000-8000-000000000007', '11000000-0000-4000-8000-000000000002', null, 'cap-100', 'capillary_points', '100 Suntec+ Points', 'Credited to your Suntec+ account', '{"points":100}', 50,  false, null, null, null, 'once', 30),
   ('12000000-0000-4000-8000-000000000008', '11000000-0000-4000-8000-000000000002', null, 'cap-500', 'capillary_points', '500 Suntec+ Points', 'Credited to your Suntec+ account', '{"points":500}', 250, false, null, null, 5, 'monthly', 31),
@@ -145,19 +145,19 @@ on conflict do nothing;
 insert into public.games (id, campaign_id, type, slug, name, description, status, priority, starts_at, ends_at,
                           attempt_rules, config, rules_text) values
   ('21000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'spin_wheel', 'year-end-spin-wheel',
-   'Year-End Spin', 'Spin the wheel for dining vouchers, Suntec+ Points and more!', 'draft', 1,
+   'Spin & Win', 'Spin the wheel for dining vouchers, Suntec+ Points and more!', 'draft', 1,
    now() - interval '7 days', now() + interval '60 days',
    '{"free_per_day":1,"max_per_day":5,"max_per_week":null,"max_per_campaign":null,"cooldown_seconds":10,"session_ttl_seconds":120}',
    '{"spin_duration_ms":4500}',
    'One free spin per day. Earn extra spins from missions and check-in streaks. Max 5 spins per day.'),
   ('21000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 'scratch_card', 'festive-scratch',
-   'Festive Scratch Card', 'Scratch to reveal an instant prize.', 'draft', 2,
+   'Scratch & Win', 'Scratch to reveal an instant prize.', 'draft', 2,
    now() - interval '7 days', now() + interval '60 days',
    '{"free_per_day":1,"max_per_day":3,"cooldown_seconds":5,"session_ttl_seconds":300}',
    '{"reveal_threshold":0.6}',
    'One free card per day; earn extra cards from missions. Max 3 cards per day.'),
   ('21000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', 'quiz', 'suntec-trivia',
-   'Suntec City Trivia', 'How well do you know Suntec City? 5 questions, 20 seconds each.', 'draft', 3,
+   'Quiz & Win', 'How well do you know Suntec City? 5 questions, 20 seconds each.', 'draft', 3,
    now() - interval '7 days', now() + interval '60 days',
    '{"free_per_day":1,"max_per_day":1,"cooldown_seconds":0,"session_ttl_seconds":180}',
    '{"questions_per_session":5,"time_limit_s":20,"pass_percent":60,"speed_bonus":true,"shuffle":true,"reward_tiers":[{"min_correct":5,"reward_id":"12000000-0000-4000-8000-000000000004"},{"min_correct":4,"reward_id":"12000000-0000-4000-8000-000000000003"},{"min_correct":3,"reward_id":"12000000-0000-4000-8000-000000000016"}]}',
@@ -195,7 +195,7 @@ insert into public.game_outcomes (id, game_id, position, label, display, reward_
   ('22000000-0000-4000-8000-000000000014', '21000000-0000-4000-8000-000000000002', 3, 'Better luck next time', '{"icon":"rotate"}', null,                                  3000, 'none')
 on conflict (id) do nothing;
 
--- Quiz bank: Suntec City Trivia
+-- Quiz bank: Quiz & Win
 insert into public.quiz_questions (id, game_id, category, text, explanation, points, sort) values
   ('23000000-0000-4000-8000-000000000001', '21000000-0000-4000-8000-000000000003', 'suntec',
    'Which Suntec City landmark was listed in the Guinness Book of Records in 1998 as the world''s largest fountain?',
@@ -208,7 +208,7 @@ insert into public.quiz_questions (id, game_id, category, text, explanation, poi
   ('23000000-0000-4000-8000-000000000004', '21000000-0000-4000-8000-000000000003', 'suntec',
    'Which of these MRT stations is linked to Suntec City?', 'Promenade station (Circle & Downtown lines) connects to Suntec City.', 100, 4),
   ('23000000-0000-4000-8000-000000000005', '21000000-0000-4000-8000-000000000003', 'campaign',
-   'How many FREE spins do you get each day in the Year-End Spin?', 'Every member gets one free spin per day.', 100, 5),
+   'How many FREE spins do you get each day in Spin & Win?', 'Every member gets one free spin per day.', 100, 5),
   ('23000000-0000-4000-8000-000000000006', '21000000-0000-4000-8000-000000000003', 'campaign',
    'What do you unlock with a 7-day check-in streak?', 'Day 7 of a streak gives 100 Suntec+ Points plus a Bonus Spin.', 100, 6),
   -- Christmas quiz (scheduled campaign)
@@ -331,7 +331,7 @@ insert into public.leaderboards (id, campaign_id, key, name, description, metric
   ('27000000-0000-4000-8000-000000000001', null, 'play-points', 'Top Players', 'Ranked by Play Points earned',
    'play_points_earned', '{daily,weekly,monthly,overall}', null, 'masked', 100,
    '[{"period":"monthly","rank_from":1,"rank_to":3,"rewards":[{"reward_id":"12000000-0000-4000-8000-000000000005","qty":1}]}]', 'active'),
-  ('27000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 'trivia-masters', 'Trivia Masters', 'Suntec City Trivia scores',
+  ('27000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 'trivia-masters', 'Quiz Masters', 'Quiz & Win scores',
    'quiz_score', '{weekly,monthly,overall}', '21000000-0000-4000-8000-000000000003', 'masked', 50, '[]', 'active')
 on conflict (id) do nothing;
 

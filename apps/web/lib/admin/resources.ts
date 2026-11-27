@@ -145,7 +145,7 @@ export const RESOURCES: Record<string, ResourceDef> = {
     fields: [
       { name: 'name', label: 'Name', type: 'text', required: true, width: 'half' },
       { name: 'slug', label: 'Slug', type: 'text', required: true, width: 'half' },
-      { name: 'type', label: 'Game type', type: 'select', options: [{ value: 'spin_wheel', label: 'Spin & Win wheel' }, { value: 'scratch_card', label: 'Scratch & Win card' }, { value: 'quiz', label: 'Quiz & Trivia' }], required: true, readOnlyOnEdit: true, width: 'third' },
+      { name: 'type', label: 'Game type', type: 'select', options: [{ value: 'spin_wheel', label: 'Spin & Win' }, { value: 'scratch_card', label: 'Scratch & Win' }, { value: 'quiz', label: 'Quiz & Win' }], required: true, readOnlyOnEdit: true, width: 'third' },
       { name: 'status', label: 'Status', type: 'select', options: lifecycle, default: 'draft', width: 'third', help: 'A wheel/scratch card can only go live when prizes total 100%.' },
       { name: 'priority', label: 'Priority', type: 'number', default: 100, width: 'third' },
       { ...campaignRef, width: 'half' },

@@ -36,6 +36,8 @@
 | 0017 | **Guest play**: guests on the public link, winnings held under a claim code (30 days) and moved to a Suntec+ member on claim; Suntec+ Points only (Play Points and the catalogue retired); `admin_points_summary` |
 | 0018 | Brighter spin-wheel colours and Suntec+ Points wording for the demo data (only where unchanged) |
 | 0019 | QR check-in bonus (e.g. 2×) applies to Suntec+ Points |
+| 0020 | Staff profile: department and invitation details for admin users; clearer access-level names |
+| 0021 | Simpler game names: Spin & Win, Scratch & Win, Quiz & Win (demo games only, where unchanged) |
 
 ## Local validation (no Supabase project needed)
 ```bash

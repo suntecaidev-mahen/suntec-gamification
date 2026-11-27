@@ -281,7 +281,7 @@ function ScratchGame({ game, onPlayed }: { game: GameDetail; onPlayed: () => voi
 }
 
 /* ---------------------------------------------------------------------------
- * Quiz & Trivia: timed questions, answers scored on the server.
+ * Quiz & Win: timed questions, answers scored on the server.
  * ------------------------------------------------------------------------ */
 function QuizGame({ game, onPlayed }: { game: GameDetail; onPlayed: () => void }) {
   const { base, refreshBalance } = usePlay();
