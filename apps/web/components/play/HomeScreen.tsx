@@ -7,9 +7,8 @@ import { formatDate } from '@suntec/core';
 import { api, haptic, emitBridge, usePlay, useApi, type ApiError } from './client';
 import { ErrorBlock, JoinCta, LoadingBlock, ResultDialog } from './bits';
 import { SUNTEC } from '@/lib/brand';
+import { GameArt } from './GameArt';
 import type { Availability, CheckinStatus, GameCard, Home } from './types';
-
-const GAME_ICON: Record<string, string> = { spin_wheel: '🎡', scratch_card: '🎟️', quiz: '🧠' };
 
 export function availabilityLabel(a: Availability | null | undefined): string {
   if (!a) return '';
@@ -189,26 +188,32 @@ export function progressText(type: string, progress: number, target: number): st
 
 function GameTile({ game, base }: { game: GameCard; base: string }) {
   const a = game.availability;
+  const photo = game.banner_path?.startsWith('https://') ? game.banner_path : null;
   return (
-    <Link href={`${base}/games/${game.id}`} className="block h-full rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
-      <Card className="flex h-full flex-col gap-2 p-4 transition-shadow hover:shadow-md">
-        <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-subtle text-2xl" aria-hidden="true">
-            {GAME_ICON[game.type] ?? '🎮'}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate font-semibold">{game.name}</p>
-            {game.campaign_name && <p className="truncate text-xs text-text-muted">{game.campaign_name}</p>}
-          </div>
-        </div>
-        <p className="line-clamp-2 text-sm text-text-muted">{game.description}</p>
-        <div className="mt-auto flex items-center justify-between pt-1">
-          <Badge tone={a?.can_play ? 'brand' : 'neutral'}>{availabilityLabel(a)}</Badge>
-          <span className="text-sm font-semibold text-primary" aria-hidden="true">
-            Play →
+    <Link
+      href={`${base}/games/${game.id}`}
+      className="group block h-full rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+    >
+      <div className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-sm transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-lg motion-reduce:transition-none motion-reduce:group-hover:translate-y-0">
+        <div className="relative aspect-[16/9] w-full overflow-hidden bg-primary-subtle">
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element -- admin-supplied banner from any host
+            <img src={photo} alt="" className="h-full w-full object-cover" loading="lazy" />
+          ) : (
+            <GameArt type={game.type} className="h-full w-full transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100" />
+          )}
+          <span className="absolute left-3 top-3">
+            <Badge tone={a?.can_play ? 'brand' : 'neutral'}>{availabilityLabel(a)}</Badge>
           </span>
         </div>
-      </Card>
+        <div className="flex flex-1 flex-col gap-1.5 p-4">
+          <p className="text-lg font-bold text-text">{game.name}</p>
+          <p className="line-clamp-2 text-sm text-text-muted">{game.description}</p>
+          <span className="mt-auto inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors group-hover:bg-primary-hover">
+            {a?.can_play ? 'Play now' : 'View game'}
+          </span>
+        </div>
+      </div>
     </Link>
   );
 }
