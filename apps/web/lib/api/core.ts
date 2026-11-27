@@ -2,7 +2,7 @@ import 'server-only';
 import { createHmac, createHash, randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { ZodError, type ZodType } from 'zod';
-import { AppError, isErrorCode, statusForCode, type ErrorCode } from '@suntec/core';
+import { AppError, isErrorCode, type ErrorCode } from '@suntec/core';
 import { supabaseAdmin } from '../supabase/admin';
 import { isSupabaseConfigured, serverEnv } from '../env';
 

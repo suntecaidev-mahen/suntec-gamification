@@ -14,6 +14,8 @@ export const GET = route<{ memberId: string }>(async (req, { memberId }) => {
     rpc<Record<string, unknown>>('member_summary', { p_member: data.id }),
     rpc<Record<string, unknown>>('checkin_status', { p_member: data.id, p_program: null }),
   ]);
-  const { member: _m, preferences: _p, ...rest } = summary as { member: unknown; preferences: unknown } & Record<string, unknown>;
+  const rest: Record<string, unknown> = { ...summary };
+  delete rest.member; // no personal data in server-to-server summaries
+  delete rest.preferences;
   return ok({ member_id: memberId, ...rest, checkin });
 });
