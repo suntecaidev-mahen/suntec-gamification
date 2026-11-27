@@ -19,7 +19,7 @@
     "test": "npm run test --workspaces --if-present",
     "format": "prettier --write .",
     "db:bundle": "node scripts/build-setup-sql.mjs",
-    "db:types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" --schema public > packages/types/src/database.ts",
+    "db:types": "npx supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" --schema public > packages/types/src/database.ts",
     "check:contrast": "node scripts/check-contrast.mjs",
     "db:validate": "node scripts/validate-sql.mjs"
   },

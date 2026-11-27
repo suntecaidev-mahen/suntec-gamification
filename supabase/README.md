@@ -1,0 +1,38 @@
+# supabase/
+
+| File | Purpose |
+|---|---|
+| `migrations/0001…0013_*.sql` | Ordered schema migrations. They are the source of truth and every one is safe to re-run. |
+| `setup_all.sql` | **Generated.** All migrations concatenated. Paste it into the Supabase SQL Editor and run it in one go. |
+| `seed.sql` | Demo data (campaign, games, rewards, missions, badges, mock Capillary members). **DEV/SIT only.** |
+
+## Run order (Supabase Dashboard → SQL Editor)
+1. `setup_all.sql`, or each migration file in numeric order.
+2. `seed.sql` (optional, demo data).
+3. Create your first admin. Go to Authentication → Users → **Add user** and tick Auto Confirm. Then run:
+   ```sql
+   select public.bootstrap_super_admin('you@yourcompany.com', 'Your Name');
+   ```
+
+## Migration map
+| # | Contents |
+|---|---|
+| 0001 | Extensions (pgcrypto, citext), enum types, utilities (secure RNG, SHA-256, append-only guard) |
+| 0002 | `app_settings`, timezone and period helpers, `members`, `member_profiles`, staff users, roles and permissions (RBAC), `bootstrap_super_admin` |
+| 0003 | Segments, eligibility rules, merchants, campaigns |
+| 0004 | Reward categories, rewards, inventory, daily caps, voucher code pool |
+| 0005 | Game-type registry, games, weighted outcomes (with the 100% integrity trigger), quiz bank, game sessions, earned attempts |
+| 0006 | Check-in programmes and streaks, missions and progress, badges, leaderboards, QR codes |
+| 0007 | Play Points ledger (append-only), reward transactions, transactional outbox |
+| 0008 | Notification templates, inbox, dispatches |
+| 0009 | API clients, SSO handoff, idempotency, rate limits, inbound and domain events, fraud signals, audit log, analytics rollups |
+| 0010 | `mock_capillary` schema (mock loyalty and voucher system, DEV/SIT only) |
+| 0011 | `updated_at` and audit triggers |
+| 0012 | Row Level Security policies for every table, publish-permission guard, function lock-down |
+| 0013 | Storage bucket `public-assets` and Realtime for the inbox |
+
+## Local validation (no Supabase project needed)
+```bash
+npm run db:bundle     # regenerate setup_all.sql after editing a migration
+npm run db:validate   # runs migrations ×2 + seed ×2 on embedded Postgres (PGlite), then RLS and constraint checks
+```
