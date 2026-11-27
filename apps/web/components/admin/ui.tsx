@@ -96,7 +96,7 @@ export function DataTable<T extends Record<string, unknown>>({
     <Card className="overflow-x-auto p-0">
       <table className="w-full min-w-[640px] text-left text-sm">
         {caption && <caption className="sr-only">{caption}</caption>}
-        <thead className="border-b border-border bg-surface-muted text-xs uppercase tracking-wide text-text-muted">
+        <thead className="border-b border-border bg-surface-muted text-xs font-medium text-text-muted">
           <tr>
             {columns.map((c) => (
               <th key={c.key} scope="col" className={`px-4 py-3 font-semibold ${c.className ?? ''}`}>
@@ -133,7 +133,7 @@ export function DataTable<T extends Record<string, unknown>>({
 export function StatCard({ label, value, hint, tone }: { label: string; value: ReactNode; hint?: ReactNode; tone?: 'default' | 'warning' | 'danger' }) {
   return (
     <Card className="p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-text-muted">{label}</p>
+      <p className="text-sm font-normal text-text-muted">{label}</p>
       <p className={`mt-1 text-2xl font-semibold ${tone === 'danger' ? 'text-danger' : tone === 'warning' ? 'text-warning' : 'text-text'}`}>{value}</p>
       {hint && <p className="mt-1 text-xs text-text-muted">{hint}</p>}
     </Card>

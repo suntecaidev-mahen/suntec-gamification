@@ -26,7 +26,7 @@ export function Sidebar({ groups, user, signOut, envTag = null }: { groups: NavG
         className={cn('fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-border bg-surface px-3 py-5 transition-transform lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0', open ? 'translate-x-0 shadow-lg' : '-translate-x-full')}
       >
         <Link href="/admin" className="mb-6 block px-3" onClick={() => setOpen(false)}>
-          <BrandInline size={36} subtitle="Admin control panel" />
+          <BrandInline size={32} subtitle="Admin control panel" className="whitespace-nowrap text-[15px]" />
           {envTag && (
             <span className="mt-2 inline-block rounded border border-warning/40 bg-warning-subtle px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-warning" title="Test environment — not the live system">
               {envTag}
@@ -36,7 +36,7 @@ export function Sidebar({ groups, user, signOut, envTag = null }: { groups: NavG
         <nav aria-label="Admin">
           {groups.map((g) => (
             <div key={g.title} className="mb-4">
-              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-text-subtle">{g.title}</p>
+              <p className="px-3 pb-1 text-xs font-normal text-text-subtle">{g.title}</p>
               <ul>
                 {g.items.map((it) => (
                   <li key={it.href}>
