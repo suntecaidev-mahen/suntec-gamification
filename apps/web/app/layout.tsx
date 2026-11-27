@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import { EnvBanner } from '@/components/EnvBanner';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
@@ -19,7 +20,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-SG" className={inter.variable}>
-      <body className="min-h-dvh bg-bg text-text">{children}</body>
+      <body className="min-h-dvh bg-bg text-text">
+        <EnvBanner />
+        {children}
+      </body>
     </html>
   );
 }

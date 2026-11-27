@@ -60,3 +60,11 @@ export function serverEnv(): ServerEnv {
 export function isSupabaseConfigured(): boolean {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
+
+export type AppEnv = 'local' | 'uat' | 'production';
+
+/** Which environment this deployment is (NEXT_PUBLIC_APP_ENV). Defaults to "local". */
+export function appEnv(): AppEnv {
+  const v = process.env.NEXT_PUBLIC_APP_ENV;
+  return v === 'uat' || v === 'production' ? v : 'local';
+}

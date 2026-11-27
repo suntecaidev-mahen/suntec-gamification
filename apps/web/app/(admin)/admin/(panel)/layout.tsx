@@ -38,6 +38,7 @@ const NAV: { title: string; items: { href: string; label: string; perm: Permissi
     items: [
       { href: '/admin/customers', label: 'Customers', perm: ['customers.read'] },
       { href: '/admin/fraud', label: 'Fraud signals', perm: ['customers.read'] },
+      { href: '/admin/test-links', label: 'In-app test links', perm: ['customers.act'] },
       { href: '/admin/r/segments', label: 'Segments', perm: ['campaigns.read'] },
       { href: '/admin/r/eligibility_rules', label: 'Eligibility rules', perm: ['campaigns.read'] },
       { href: '/admin/r/notification_templates', label: 'Notifications', perm: ['campaigns.read'] },

@@ -10,6 +10,10 @@ import { supabaseAdmin } from '../supabase/admin';
 import { staffCan } from './session';
 import { getResource, type FieldDef } from './resources';
 import { friendlyDbError, fromSgtInput } from './format';
+import QRCode from 'qrcode';
+import { toMemberProfile } from '@suntec/core';
+import { loyalty } from '../api/loyalty';
+import { appEnv, publicEnv } from '../env';
 
 export type ActionState = {
   ok?: boolean;
@@ -415,4 +419,64 @@ export async function saveSettings(_p: ActionState, fd: FormData): Promise<Actio
 export async function signOut() {
   await (await db()).auth.signOut();
   redirect('/admin/login');
+}
+
+/* ----------------------------------------------------------------------------
+ * UAT / SIT only: in-app (embed) test links
+ * Does what the Suntec+ backend does in production (POST /integrations/sessions):
+ * creates a single-use handoff code for a member so testers can open /embed on a
+ * phone without the native app. Disabled in production.
+ * ------------------------------------------------------------------------- */
+const TEST_LINK_ENTRIES: Record<string, string> = {
+  home: '/embed',
+  missions: '/embed/missions',
+  rewards: '/embed/rewards',
+  badges: '/embed/badges',
+  leaderboard: '/embed/leaderboard',
+  inbox: '/embed/inbox',
+};
+const TEST_LINK_MINUTES = 10;
+
+export async function createEmbedTestLink(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const staff = await staffCan('customers.act');
+  if (!staff) return denied;
+  if (appEnv() === 'production') return { error: 'Test links are disabled in production.' };
+  const memberId = str(fd, 'member_id');
+  if (!memberId) return { error: 'Choose a member.' };
+  const lm = await loyalty().getMember(memberId);
+  if (!lm) return { error: `Member ${memberId} was not found in the loyalty system.` };
+
+  const admin = supabaseAdmin();
+  const { data: memberRef, error: memberErr } = await admin.rpc('ensure_member', {
+    p_suntec_member_id: lm.memberId,
+    p_profile: toMemberProfile(lm),
+    p_auth_user_id: null,
+  });
+  if (memberErr) return { error: friendlyDbError(memberErr) };
+
+  const code = randomBytes(32).toString('base64url');
+  const expiresAt = new Date(Date.now() + TEST_LINK_MINUTES * 60_000);
+  const { error } = await admin.from('session_handoffs').insert({
+    code_hash: createHash('sha256').update(code, 'utf8').digest('hex'),
+    member_id: String(memberRef),
+    entry: TEST_LINK_ENTRIES[str(fd, 'entry')] ?? '/embed',
+    expires_at: expiresAt.toISOString(),
+  });
+  if (error) return { error: friendlyDbError(error) };
+  await admin.from('audit_log').insert({
+    actor_type: 'staff',
+    actor_id: staff.userId,
+    action: 'embed.test_link',
+    entity: 'members',
+    entity_id: String(memberRef),
+    after: { suntec_member_id: lm.memberId, expires_at: expiresAt.toISOString() },
+  });
+
+  const url = `${publicEnv().NEXT_PUBLIC_APP_URL.replace(/\/+$/, '')}/api/v1/auth/exchange?code=${code}`;
+  const qr = await QRCode.toDataURL(url, { margin: 1, width: 240, color: { dark: '#1F2937', light: '#FFFFFF' } });
+  return {
+    ok: true,
+    message: `Link created for ${lm.memberId}. It works once and expires in ${TEST_LINK_MINUTES} minutes.`,
+    data: { url, qr },
+  };
 }
