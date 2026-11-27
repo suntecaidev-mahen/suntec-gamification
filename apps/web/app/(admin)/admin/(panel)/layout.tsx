@@ -9,7 +9,8 @@ import { appEnv, isSupabaseConfigured } from '@/lib/env';
 export const metadata: Metadata = { title: { default: 'Admin', template: '%s · Play & Win Admin' } };
 export const dynamic = 'force-dynamic';
 
-const NAV: { title: string; items: { href: string; label: string; perm: Permission[] }[] }[] = [
+// superOnly: the whole group is shown to Super Administrators only.
+const NAV: { title: string; superOnly?: boolean; items: { href: string; label: string; perm: Permission[] }[] }[] = [
   { title: 'Overview', items: [{ href: '/admin', label: 'Dashboard', perm: ['reports.read', 'campaigns.read'] }] },
   {
     title: 'Engagement',
@@ -45,6 +46,7 @@ const NAV: { title: string; items: { href: string; label: string; perm: Permissi
   { title: 'Insights', items: [{ href: '/admin/reports', label: 'Reports', perm: ['reports.read'] }] },
   {
     title: 'Administration',
+    superOnly: true,
     items: [
       { href: '/admin/staff', label: 'Users & roles', perm: ['staff.manage'] },
       { href: '/admin/api-clients', label: 'API clients', perm: ['api_clients.manage'] },
@@ -65,7 +67,8 @@ export default async function AdminPanelLayout({ children }: { children: React.R
     );
   }
   const staff = await requireStaff();
-  const groups: NavGroup[] = NAV.map((g) => ({ title: g.title, items: g.items.filter((i) => i.perm.some((p) => staff.can(p))) })).filter((g) => g.items.length > 0);
+  const isSuper = staff.roles.includes('super_admin');
+  const groups: NavGroup[] = NAV.filter((g) => !g.superOnly || isSuper).map((g) => ({ title: g.title, items: g.items.filter((i) => i.perm.some((p) => staff.can(p))) })).filter((g) => g.items.length > 0);
   return (
     <div className="min-h-dvh bg-surface-muted lg:flex">
       <Sidebar groups={groups} user={{ name: staff.displayName, roles: staff.roles.map((r) => r.replace(/_/g, ' ')).join(', ') }} signOut={signOut} envTag={appEnv() === 'production' ? null : appEnv() === 'uat' ? 'UAT' : 'LOCAL'} />

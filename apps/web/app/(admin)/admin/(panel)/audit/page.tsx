@@ -19,7 +19,8 @@ function diff(before: unknown, after: unknown): string {
 }
 
 export default async function AuditPage({ searchParams }: { searchParams: Promise<{ entity?: string; action?: string }> }) {
-  const staff = await requireStaff(['audit.read', 'audit.read_own']);
+  // Administration pages are for Super Administrators only (only they hold audit.read).
+  const staff = await requireStaff('audit.read');
   const { entity, action } = await searchParams;
   const supabase = await createSupabaseServerClient();
   let q = supabase.from('audit_log').select('id, created_at, actor_type, actor_id, action, entity, entity_id, reason, before, after').order('id', { ascending: false }).limit(200);
