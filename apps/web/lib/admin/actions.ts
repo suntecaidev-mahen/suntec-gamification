@@ -14,6 +14,7 @@ import QRCode from 'qrcode';
 import { toMemberProfile } from '@suntec/core';
 import { loyalty } from '../api/loyalty';
 import { appEnv, publicEnv } from '../env';
+import { sendStaffInvite, type InviteResult } from './invite';
 
 export type ActionState = {
   ok?: boolean;
@@ -319,63 +320,112 @@ export async function revokeApiClient(_p: ActionState, fd: FormData): Promise<Ac
 }
 
 /* ----------------------------------------------------------------------------
- * Staff & roles
+ * Users & roles (admin users)
+ * New users get an invitation email from Supabase Auth and create their own password.
+ * Each user has one access level (role); the database supports more than one.
  * ------------------------------------------------------------------------- */
+async function validRole(roleKey: string): Promise<boolean> {
+  const { data } = await (await db()).from('roles').select('key').eq('key', roleKey).maybeSingle();
+  return Boolean(data);
+}
+
+async function activeSuperAdmins(): Promise<string[]> {
+  const { data } = await supabaseAdmin().from('staff_user_roles').select('user_id, staff_users!staff_user_roles_user_id_fkey(active)').eq('role_key', 'super_admin');
+  return (data ?? [])
+    .filter((r) => (r.staff_users as unknown as { active: boolean } | null)?.active)
+    .map((r) => r.user_id as string);
+}
+
+function inviteOutcome(email: string, r: InviteResult, verb: string): ActionState {
+  if (r.emailSent) return { ok: true, message: `${verb} An invitation email was sent to ${email}. They click the link and create their own password.` };
+  return {
+    ok: true,
+    message: `${verb} The email could not be sent (${r.emailError ?? 'email service unavailable'}). Copy the one-time link below and send it to ${email} securely.`,
+    data: { link: r.link ?? '' },
+  };
+}
+
 export async function inviteStaff(_p: ActionState, fd: FormData): Promise<ActionState> {
   const staff = await staffCan('staff.manage');
   if (!staff) return denied;
   const email = str(fd, 'email').toLowerCase();
   const name = str(fd, 'display_name');
-  const roles = fd.getAll('roles').map(String);
-  if (!z.email().safeParse(email).success) return { fieldErrors: { email: 'Enter a valid email' }, error: 'Please fix the highlighted fields.' };
-  if (name.length < 2) return { fieldErrors: { display_name: 'Required' }, error: 'Please fix the highlighted fields.' };
-  if (roles.length === 0) return { error: 'Choose at least one role.' };
+  const department = str(fd, 'department');
+  const role = str(fd, 'role');
+  const fieldErrors: Record<string, string> = {};
+  if (!z.email().safeParse(email).success) fieldErrors.email = 'Enter a valid email address';
+  if (name.length < 2) fieldErrors.display_name = 'Enter the full name';
+  if (!role || !(await validRole(role))) fieldErrors.role = 'Choose an access level';
+  if (Object.keys(fieldErrors).length) return { fieldErrors, error: 'Please fix the highlighted fields.' };
 
-  // Auth users can only be created with the service role (server-side, after the permission check above).
-  const tempPassword = `Sp-${randomBytes(9).toString('base64url')}!`;
-  const admin = supabaseAdmin().auth.admin;
-  let userId: string | undefined;
-  const created = await admin.createUser({ email, password: tempPassword, email_confirm: true, user_metadata: { display_name: name } });
-  if (created.error) {
-    const list = await admin.listUsers({ page: 1, perPage: 1000 });
-    userId = list.data?.users.find((u) => u.email?.toLowerCase() === email)?.id;
-    if (!userId) return { error: created.error.message };
-  } else {
-    userId = created.data.user.id;
+  const { data: existingStaff } = await (await db()).from('staff_users').select('id').eq('email', email).maybeSingle();
+  if (existingStaff) return { fieldErrors: { email: 'Already a user' }, error: `${email} is already an admin user. Open it from the list to change access or resend the invitation.` };
+
+  let result: InviteResult;
+  try {
+    result = await sendStaffInvite(email, name); // service role, only after the permission check above
+  } catch (e) {
+    return { error: `Could not create the login: ${(e as Error).message}` };
   }
-  const supabase = await db();
-  const up = await supabase.from('staff_users').upsert({ id: userId, email, display_name: name, active: true });
+
+  const supabase = await db(); // as the signed-in admin → RLS + audit log
+  const up = await supabase.from('staff_users').upsert({
+    id: result.userId, email, display_name: name, department: department || null, active: true,
+    invited_at: new Date().toISOString(), invited_by: staff.userId,
+  });
   if (up.error) return { error: friendlyDbError(up.error) };
-  const ins = await supabase.from('staff_user_roles').upsert(roles.map((r) => ({ user_id: userId, role_key: r, granted_by: staff.userId })));
+  await supabase.from('staff_user_roles').delete().eq('user_id', result.userId);
+  const ins = await supabase.from('staff_user_roles').insert({ user_id: result.userId, role_key: role, granted_by: staff.userId });
   if (ins.error) return { error: friendlyDbError(ins.error) };
   revalidatePath('/admin/staff');
-  return {
-    ok: true,
-    message: created.error ? 'Existing login promoted to staff.' : 'Staff user created. Share the temporary password securely; they should change it after first login.',
-    data: created.error ? {} : { email, tempPassword },
-  };
+  return inviteOutcome(email, result, `${name} was added.`);
 }
 
 export async function updateStaff(_p: ActionState, fd: FormData): Promise<ActionState> {
   const staff = await staffCan('staff.manage');
   if (!staff) return denied;
   const userId = str(fd, 'user_id');
-  const roles = fd.getAll('roles').map(String);
+  const name = str(fd, 'display_name');
+  const department = str(fd, 'department');
+  const role = str(fd, 'role');
   const active = fd.get('active') === 'on';
-  if (userId === staff.userId && (!active || !roles.includes('super_admin')) && staff.roles.includes('super_admin')) {
-    return { error: 'You cannot deactivate yourself or remove your own Super Administrator role.' };
+  if (name.length < 2) return { fieldErrors: { display_name: 'Enter the full name' }, error: 'Please fix the highlighted fields.' };
+  if (!role || !(await validRole(role))) return { fieldErrors: { role: 'Choose an access level' }, error: 'Please fix the highlighted fields.' };
+  if (userId === staff.userId && (!active || role !== 'super_admin') && staff.roles.includes('super_admin')) {
+    return { error: 'You cannot deactivate yourself or remove your own full access. Ask another Super Administrator.' };
+  }
+  const supers = await activeSuperAdmins();
+  if (supers.includes(userId) && supers.length === 1 && (!active || role !== 'super_admin')) {
+    return { error: 'This is the only user with full access. Give another user full access first.' };
   }
   const supabase = await db();
-  const u = await supabase.from('staff_users').update({ active }).eq('id', userId);
+  const u = await supabase.from('staff_users').update({ display_name: name, department: department || null, active }).eq('id', userId);
   if (u.error) return { error: friendlyDbError(u.error) };
   const d = await supabase.from('staff_user_roles').delete().eq('user_id', userId);
   if (d.error) return { error: friendlyDbError(d.error) };
-  if (roles.length) {
-    const i = await supabase.from('staff_user_roles').insert(roles.map((r) => ({ user_id: userId, role_key: r, granted_by: staff.userId })));
-    if (i.error) return { error: friendlyDbError(i.error) };
-  }
+  const i = await supabase.from('staff_user_roles').insert({ user_id: userId, role_key: role, granted_by: staff.userId });
+  if (i.error) return { error: friendlyDbError(i.error) };
   revalidatePath('/admin/staff');
-  return { ok: true, message: 'Staff user updated.' };
+  revalidatePath(`/admin/staff/${userId}`);
+  return { ok: true, message: 'User updated.' };
+}
+
+export async function resendStaffInvite(_p: ActionState, fd: FormData): Promise<ActionState> {
+  const staff = await staffCan('staff.manage');
+  if (!staff) return denied;
+  const userId = str(fd, 'user_id');
+  const { data: s } = await (await db()).from('staff_users').select('email, display_name, active').eq('id', userId).maybeSingle();
+  if (!s) return { error: 'User not found.' };
+  if (!s.active) return { error: 'Reactivate the user before sending an invitation.' };
+  let result: InviteResult;
+  try {
+    result = await sendStaffInvite(String(s.email), s.display_name);
+  } catch (e) {
+    return { error: `Could not send the invitation: ${(e as Error).message}` };
+  }
+  await (await db()).from('staff_users').update({ invited_at: new Date().toISOString(), invited_by: staff.userId }).eq('id', userId);
+  revalidatePath(`/admin/staff/${userId}`);
+  return inviteOutcome(String(s.email), result, 'Invitation re-sent.');
 }
 
 /* ----------------------------------------------------------------------------

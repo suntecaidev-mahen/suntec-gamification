@@ -37,7 +37,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   return (
     <>
-      <PageHeader title={`Welcome, ${staff.displayName.split(' ')[0]}`} description="Today at a glance (Singapore time)." />
+      <PageHeader title={`Welcome, ${staff.displayName.split(' ')[0]}`} />
       {denied && <Alert tone="warning" className="mb-4">You don’t have access to that page.</Alert>}
       {error && <Alert tone="danger">{error.message}</Alert>}
       {!canSee && <Alert tone="info">Your role has no dashboard access. Use the menu to get started.</Alert>}

@@ -46,7 +46,7 @@ const NAV: { title: string; items: { href: string; label: string; perm: Permissi
   {
     title: 'Administration',
     items: [
-      { href: '/admin/staff', label: 'Staff & roles', perm: ['staff.manage'] },
+      { href: '/admin/staff', label: 'Users & roles', perm: ['staff.manage'] },
       { href: '/admin/api-clients', label: 'API clients', perm: ['api_clients.manage'] },
       { href: '/admin/audit', label: 'Audit log', perm: ['audit.read', 'audit.read_own'] },
       { href: '/admin/settings', label: 'Settings', perm: ['settings.manage'] },
