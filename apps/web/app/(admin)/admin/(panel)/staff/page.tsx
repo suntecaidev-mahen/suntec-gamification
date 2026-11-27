@@ -5,7 +5,7 @@ import { lastSignIns } from '@/lib/admin/invite';
 import { inviteStaff } from '@/lib/admin/actions';
 import { ActionForm } from '@/components/admin/ActionForm';
 import { DataTable, PageHeader, Section } from '@/components/admin/ui';
-import { StaffFields, InviteLinkResult, staffStatus, STATUS_TONE } from '@/components/admin/StaffFields';
+import { StaffFields, staffStatus, STATUS_TONE } from '@/components/admin/StaffFields';
 
 export const metadata = { title: 'Users & roles' };
 export const dynamic = 'force-dynamic';
@@ -51,7 +51,7 @@ export default async function StaffPage() {
   return (
     <>
       <PageHeader title="Users & roles" description="Add admin users and choose what each person can access. New users receive an email to create their own password." />
-      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+      <div className="grid gap-6 2xl:grid-cols-[1fr_380px]">
         <DataTable<Row>
           rows={rows}
           rowHref={(r) => `/admin/staff/${r.id}`}
@@ -66,10 +66,10 @@ export default async function StaffPage() {
           ]}
           empty={{ title: 'No admin users yet' }}
         />
-        <Card className="h-fit">
+        <Card className="h-fit max-w-2xl">
           <h2 className="mb-1 text-base font-semibold">Add user</h2>
           <p className="mb-4 text-sm text-text-muted">They’ll get an email with a link to create their password.</p>
-          <ActionForm action={inviteStaff} submitLabel="Add user and send invitation" render={(s) => <InviteLinkResult link={s.data?.link ? String(s.data.link) : null} />}>
+          <ActionForm action={inviteStaff} submitLabel="Add user and send invitation" result="invite-link">
             <StaffFields roles={roles ?? []} />
           </ActionForm>
         </Card>

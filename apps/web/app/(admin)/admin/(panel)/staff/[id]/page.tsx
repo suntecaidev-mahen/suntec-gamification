@@ -7,7 +7,7 @@ import { lastSignIns } from '@/lib/admin/invite';
 import { resendStaffInvite, updateStaff } from '@/lib/admin/actions';
 import { ActionForm } from '@/components/admin/ActionForm';
 import { PageHeader } from '@/components/admin/ui';
-import { InviteLinkResult, StaffFields, STATUS_TONE, staffStatus } from '@/components/admin/StaffFields';
+import { StaffFields, STATUS_TONE, staffStatus } from '@/components/admin/StaffFields';
 
 export const metadata = { title: 'Edit user' };
 export const dynamic = 'force-dynamic';
@@ -72,7 +72,7 @@ export default async function EditStaffPage({ params }: { params: Promise<{ id: 
                   ? 'Emails a new link so they can create their password.'
                   : 'Emails a link so they can set a new password.'}
               </p>
-              <ActionForm action={resendStaffInvite} submitLabel={status === 'Invited' ? 'Resend invitation' : 'Send reset email'} variant="secondary" render={(r) => <InviteLinkResult link={r.data?.link ? String(r.data.link) : null} />}>
+              <ActionForm action={resendStaffInvite} submitLabel={status === 'Invited' ? 'Resend invitation' : 'Send reset email'} variant="secondary" result="invite-link">
                 <input type="hidden" name="user_id" value={s.id} />
               </ActionForm>
             </Card>

@@ -1,4 +1,4 @@
-import { Alert, Checkbox, Field, Input, Select, type BadgeTone } from '@suntec/ui';
+import { Checkbox, Field, Input, Select, type BadgeTone } from '@suntec/ui';
 
 export const DEPARTMENTS = ['Management', 'Marketing', 'Customer Service', 'Concierge', 'Leasing', 'Operations', 'Finance', 'IT'];
 
@@ -51,12 +51,3 @@ export function StaffFields({
   );
 }
 
-/** When the email could not be sent, show the one-time link for the admin to pass on. */
-export function InviteLinkResult({ link }: { link: string | null }) {
-  if (!link) return null;
-  return (
-    <Alert tone="warning" title="Send this link to the user (valid for 24 hours, one use)">
-      <code className="mt-1 block break-all rounded bg-surface p-2 font-mono text-xs text-text">{link}</code>
-    </Alert>
-  );
-}

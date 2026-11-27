@@ -25,17 +25,7 @@ export default async function TestLinksPage() {
           <ActionForm
             action={createEmbedTestLink}
             submitLabel="Create test link"
-            render={(s) =>
-              s.data?.url ? (
-                <div className="space-y-3 rounded-md border border-border bg-surface-muted p-4">
-                  <p className="text-sm font-medium">Scan with the tester&apos;s phone camera, or send them the link:</p>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={String(s.data.qr)} alt="QR code for the in-app test link" width={200} height={200} className="rounded border border-border bg-white" />
-                  <code className="block break-all rounded bg-surface p-2 font-mono text-xs">{String(s.data.url)}</code>
-                  <p className="text-xs text-text-muted">Single use · expires in 10 minutes. Create a new link for each tester or device.</p>
-                </div>
-              ) : null
-            }
+            result="test-link"
           >
             <Field id="member_id" label="Sign in as demo member" required help="Give each tester a different member so their progress stays separate.">
               <Select id="member_id" name="member_id" required defaultValue="">

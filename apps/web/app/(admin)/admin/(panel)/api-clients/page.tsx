@@ -31,14 +31,7 @@ export default async function ApiClientsPage() {
         <ActionForm
           action={createApiClient}
           submitLabel="Create key"
-          render={(s) =>
-            s.data?.key ? (
-              <Alert tone="warning" title="Copy this key now">
-                <code className="block break-all rounded bg-surface p-2 font-mono text-xs text-text">{String(s.data.key)}</code>
-                It will not be shown again. Store it in the calling system’s secret manager.
-              </Alert>
-            ) : null
-          }
+          result="api-key"
         >
           <Field id="name" label="Name" required>
             <Input id="name" name="name" placeholder="Suntec+ app backend (PROD)" required />
