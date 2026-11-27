@@ -3,6 +3,7 @@ import { Alert, Card } from '@suntec/ui';
 import { getStaff } from '@/lib/admin/session';
 import { isSupabaseConfigured } from '@/lib/env';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { signOut } from '@/lib/admin/actions';
 import { LoginForm } from './LoginForm';
 
 export const metadata = { title: 'Staff sign in' };
@@ -11,10 +12,12 @@ export const dynamic = 'force-dynamic';
 export default async function AdminLogin({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   let notStaff = false;
+  let email: string | undefined;
   if (isSupabaseConfigured()) {
     if (await getStaff()) redirect('/admin');
     const { data } = await (await createSupabaseServerClient()).auth.getUser();
     notStaff = Boolean(data.user);
+    email = data.user?.email;
   }
   return (
     <main className="flex min-h-dvh items-center justify-center bg-surface-muted px-4">
@@ -34,7 +37,12 @@ export default async function AdminLogin({ searchParams }: { searchParams: Promi
             <>
               {notStaff && (
                 <Alert tone="warning" className="mb-4">
-                  You are signed in, but this account is not an active staff user. Ask a Super Administrator to add you.
+                  You are signed in{email ? <> as <strong>{email}</strong></> : null}, but this account is not a staff user.{' '}
+                  <form action={signOut} className="mt-2">
+                    <button type="submit" className="font-medium underline">
+                      Sign out and use a staff account
+                    </button>
+                  </form>
                 </Alert>
               )}
               <LoginForm initialError={error === 'link' ? 'That sign-in link is invalid or has expired.' : undefined} />
