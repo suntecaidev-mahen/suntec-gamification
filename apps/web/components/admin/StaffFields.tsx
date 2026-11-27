@@ -1,6 +1,6 @@
 import { Checkbox, Field, Input, Select, type BadgeTone } from '@suntec/ui';
 
-export const DEPARTMENTS = ['Digital & Application', 'Marketing', 'Customer Service', 'Concierge', 'Leasing', 'Operations', 'Finance', 'IT'];
+export const DEPARTMENTS = ['Digital & Application', 'Digital Marketing', 'Customer Service'];
 
 export type StaffStatus = 'Invited' | 'Active' | 'Deactivated';
 export const STATUS_TONE: Record<StaffStatus, BadgeTone> = { Invited: 'warning', Active: 'success', Deactivated: 'neutral' };
