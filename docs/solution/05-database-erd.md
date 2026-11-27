@@ -7,14 +7,14 @@ PostgreSQL, 3NF for transactional data. Ledgers are append-only. Configuration t
 | Brief entity (§9) | Table(s) |
 |---|---|
 | Customer | `members` (only the reference to the Suntec+/Capillary member, with minimal personal data) |
-| CustomerGamificationProfile | `member_profiles` (PP balance, streaks, privacy, counters) |
+| CustomerGamificationProfile | `member_profiles` (PP balance, counters, privacy), `member_streaks`, `member_devices` |
 | Campaign | `campaigns`, `campaign_segments` |
-| Game | `games`, `game_types`, `wheel_segments`, `scratch_slots`, `quiz_questions`, `quiz_options` |
+| Game | `games`, `game_types`, `game_outcomes` (wheel segments and scratch-card prizes, weighted), `quiz_questions`, `quiz_options` |
 | GameSession | `game_sessions`, `game_session_answers` |
 | Mission | `missions` |
 | MissionParticipation | `mission_enrolments` |
 | MissionProgress | `mission_progress` (per period), `mission_progress_events` (dedupe) |
-| CheckInHistory | `checkins`, `checkin_programs`, `checkin_streak_rules` |
+| CheckInHistory | `checkins`, `checkin_programs`, `checkin_streak_rules`, `member_streaks` |
 | Reward | `reward_categories`, `rewards` |
 | RewardInventory | `reward_inventory`, `reward_inventory_daily`, `voucher_code_pool` |
 | RewardTransaction | `reward_transactions`, `outbox` |
@@ -48,8 +48,7 @@ erDiagram
   campaigns }o--o{ segments : targets
 
   game_types ||--o{ games : defines
-  games ||--o{ wheel_segments : "spin config"
-  games ||--o{ scratch_slots : "scratch config"
+  games ||--o{ game_outcomes : "spin/scratch outcomes"
   games ||--o{ quiz_questions : "quiz config"
   quiz_questions ||--o{ quiz_options : has
   games ||--o{ game_sessions : records
@@ -66,8 +65,8 @@ erDiagram
   rewards ||--o{ reward_inventory_daily : caps
   rewards ||--o{ voucher_code_pool : codes
   rewards ||--o{ reward_transactions : allocated
-  wheel_segments }o--o| rewards : prize
-  scratch_slots }o--o| rewards : prize
+  game_outcomes }o--o| rewards : prize
+  members ||--o{ attempt_balances : "earned attempts"
   reward_transactions ||--o{ outbox : delivers
 
   badges ||--o{ member_badges : awarded
@@ -99,10 +98,10 @@ erDiagram
 | Table | Key columns | Integrity and indexes |
 |---|---|---|
 | `members` | id (uuid), suntec_member_id, card_no, auth_user_id, display_name, email, tier, joined_at, status | UNIQUE(suntec_member_id), UNIQUE(card_no), UNIQUE(auth_user_id), idx(status) |
-| `member_profiles` | member_id PK, pp_balance, pp_lifetime, current_streak, best_streak, last_checkin_day, lb_display_mode, lb_opt_out, version | `pp_balance >= 0` CHECK. The row is locked `FOR UPDATE` on every balance change. |
+| `member_profiles` | member_id PK, pp_balance, pp_lifetime_earned, engagement counters, lb_display_mode, lb_nickname, lb_opt_out, notify_* | `pp_balance >= 0` CHECK. The row is locked `FOR UPDATE` on every balance change. |
 | `campaigns` | id, name, slug, status, priority, starts_at, ends_at, banner_path, limits jsonb, eligibility_rule_id | idx(status, starts_at, ends_at), CHECK(ends_at > starts_at) |
 | `games` | id, campaign_id, type, name, status, config jsonb, attempt_rules jsonb (free_per_day, pp_cost, cooldown_s, max_per_campaign), starts_at, ends_at | idx(campaign_id, status) |
-| `wheel_segments` | game_id, position, label, color, icon, reward_id, weight_bp (0–10000), fallback_strategy, fallback_segment_id | UNIQUE(game_id, position). Publish check: Σweight_bp = 10000. |
+| `game_outcomes` | game_id, position, label, display (colour, text colour, icon), reward_id, weight_bp (0–10000), fallback_strategy (none, outcome, renormalize), fallback_outcome_id | UNIQUE(game_id, position). Deferred constraint trigger: Σweight_bp = 10000 for active or scheduled games. |
 | `game_sessions` | id (`GS-…`), member_id, game_id, status, payment_source, pp_cost, outcome jsonb, score, reward_txn_id, idempotency_key, device_hash, ip_hash, started_at, expires_at, completed_at | **UNIQUE(member_id, idempotency_key)**, idx(member_id, game_id, started_at DESC), idx(game_id, started_at) |
 | `checkins` | member_id, program_id, day (date, SGT), streak_after, source (app, qr) | **UNIQUE(member_id, program_id, day)**, idx(day) |
 | `missions` | id, campaign_id, title, category, objective jsonb {type, target, filters}, recurrence (once, daily, weekly, monthly), enrolment (auto, opt_in), max_participants, reward_spec jsonb, starts_at, ends_at | idx(campaign_id, status) |
