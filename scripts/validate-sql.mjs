@@ -421,6 +421,10 @@ async function engineChecks(db) {
   await val(`select public.lb_add($1, 'play_points_earned', 30)`, [B]);
   const qr = await val(`select public.qr_scan($1, 'DEMO-MALL-VISIT-FOUNTAIN')`, [B]);
   check(qr.purpose === 'visit', 'QR mall-visit scan accepted');
+  const C = await val(`select public.ensure_member('SUN-00010003', '{"first_name":"Ravi","last_name":"Kumar","tier":"silver"}')`);
+  const qrCi = await val(`select public.qr_scan($1, 'DEMO-CONCIERGE-CHECKIN-T3')`, [C]);
+  const qrPts = qrCi.result?.checkin?.rewards?.find((r) => r.type === 'capillary_points');
+  check(qrCi.purpose === 'checkin' && Number(qrPts?.amount) === 20, 'QR check-in at the mall gives 2× Suntec+ Points (10 → 20)', qrPts);
   await expectCode('QR per-member daily limit enforced', `select public.qr_scan('${B}', 'DEMO-MALL-VISIT-FOUNTAIN')`, 'ALREADY_SCANNED');
   const lb = await val(`select public.leaderboard_view('27000000-0000-4000-8000-000000000001', 'daily', $1)`, [A]);
   check(lb.entries.length >= 2 && lb.me?.rank >= 1 && !JSON.stringify(lb.entries).includes('Tan'), 'leaderboard ranks members with masked names', lb.entries);

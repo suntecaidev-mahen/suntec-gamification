@@ -34,6 +34,8 @@
 | 0015 | Atomic admin editors: `admin_save_outcomes` (100% rule on the final state) and `admin_save_question` |
 | 0016 | Portal support: demo-member picker for the mock loyalty system |
 | 0017 | **Guest play**: guests on the public link, winnings held under a claim code (30 days) and moved to a Suntec+ member on claim; Suntec+ Points only (Play Points and the catalogue retired); `admin_points_summary` |
+| 0018 | Brighter spin-wheel colours and Suntec+ Points wording for the demo data (only where unchanged) |
+| 0019 | QR check-in bonus (e.g. 2×) applies to Suntec+ Points |
 
 ## Local validation (no Supabase project needed)
 ```bash
