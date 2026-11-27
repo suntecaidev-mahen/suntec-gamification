@@ -20,10 +20,12 @@
     "format": "prettier --write .",
     "db:bundle": "node scripts/build-setup-sql.mjs",
     "db:types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" --schema public > packages/types/src/database.ts",
-    "check:contrast": "node scripts/check-contrast.mjs"
+    "check:contrast": "node scripts/check-contrast.mjs",
+    "db:validate": "node scripts/validate-sql.mjs"
   },
   "devDependencies": {
     "prettier": "^3.10.1",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "@electric-sql/pglite": "^0.6.0"
   }
 }
