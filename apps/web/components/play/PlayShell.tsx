@@ -8,6 +8,7 @@ import { api, emitBridge, PlayContext, type PlayMode } from './client';
 import { PlayPointsPill } from './bits';
 import type { Summary } from './types';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { BrandInline } from '@/components/Brand';
 
 const NAV = [
   { path: '', label: 'Home', icon: '🏠' },
@@ -60,8 +61,8 @@ export function PlayShell({ mode, initial, children }: { mode: PlayMode; initial
       {mode === 'portal' ? (
         <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-            <Link href={base} className="text-lg font-bold">
-              Suntec<span className="text-primary">+</span> <span className="font-semibold">Play &amp; Win</span>
+            <Link href={base} className="text-lg" aria-label="Suntec+ Play & Win home">
+              <BrandInline size={34} />
             </Link>
             <nav aria-label="Main" className="hidden gap-1 md:flex">
               {NAV.map((n) => (

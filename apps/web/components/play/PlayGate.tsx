@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Alert, Button, Card, Select } from '@suntec/ui';
 import { listDemoMembers, resolvePlayMember } from '@/lib/play/member';
 import { linkDemoMember } from '@/lib/play/actions';
+import { BrandInline } from '@/components/Brand';
 import { PlayShell } from './PlayShell';
 import type { PlayMode } from './client';
 
@@ -11,8 +12,8 @@ function Centered({ children }: { children: ReactNode }) {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-surface-muted px-4">
       <div className="w-full max-w-md">
-        <p className="mb-4 text-center text-xl font-bold">
-          Suntec<span className="text-primary">+</span> Play &amp; Win
+        <p className="mb-4 text-center text-xl">
+          <BrandInline size={36} />
         </p>
         {children}
       </div>

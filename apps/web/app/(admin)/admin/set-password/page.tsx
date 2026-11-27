@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { Card } from '@suntec/ui';
 import { isSupabaseConfigured } from '@/lib/env';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { BrandHero } from '@/components/Brand';
 import { SetPasswordForm } from './SetPasswordForm';
 
 export const metadata = { title: 'Set a new password' };
@@ -15,12 +16,7 @@ export default async function SetPasswordPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-surface-muted px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <p className="text-2xl font-bold">
-            Suntec<span className="text-primary">+</span> Play &amp; Win
-          </p>
-          <p className="text-sm text-text-muted">Set a new password</p>
-        </div>
+        <BrandHero subtitle="Set a new password" logoWidth={120} />
         <Card className="p-6">
           <p className="mb-4 text-sm text-text-muted">
             Signed in as <strong className="text-text">{data.user.email}</strong>

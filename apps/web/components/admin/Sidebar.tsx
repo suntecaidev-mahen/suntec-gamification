@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { cn } from '@suntec/ui';
+import { BrandInline } from '@/components/Brand';
 
 export type NavGroup = { title: string; items: { href: string; label: string }[] };
 
@@ -15,9 +16,7 @@ export function Sidebar({ groups, user, signOut }: { groups: NavGroup[]; user: {
   return (
     <>
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-surface px-4 py-3 lg:hidden">
-        <span className="font-semibold">
-          Suntec<span className="text-primary">+</span> Play &amp; Win
-        </span>
+        <BrandInline size={28} />
         <button type="button" className="rounded-md border border-input-border px-3 py-1.5 text-sm" aria-expanded={open} aria-controls="admin-nav" onClick={() => setOpen(!open)}>
           Menu
         </button>
@@ -27,10 +26,7 @@ export function Sidebar({ groups, user, signOut }: { groups: NavGroup[]; user: {
         className={cn('fixed inset-y-0 left-0 z-40 w-64 overflow-y-auto border-r border-border bg-surface px-3 py-5 transition-transform lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0', open ? 'translate-x-0 shadow-lg' : '-translate-x-full')}
       >
         <Link href="/admin" className="mb-6 block px-3" onClick={() => setOpen(false)}>
-          <span className="text-lg font-bold">
-            Suntec<span className="text-primary">+</span>
-          </span>
-          <span className="block text-xs font-medium uppercase tracking-wider text-text-muted">Play &amp; Win · Admin</span>
+          <BrandInline size={36} subtitle="Admin control panel" />
         </Link>
         <nav aria-label="Admin">
           {groups.map((g) => (

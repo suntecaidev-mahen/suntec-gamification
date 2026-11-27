@@ -4,6 +4,7 @@ import { getStaff } from '@/lib/admin/session';
 import { isSupabaseConfigured } from '@/lib/env';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { signOut } from '@/lib/admin/actions';
+import { BrandHero } from '@/components/Brand';
 import { LoginForm } from './LoginForm';
 
 export const metadata = { title: 'Staff sign in' };
@@ -22,12 +23,7 @@ export default async function AdminLogin({ searchParams }: { searchParams: Promi
   return (
     <main className="flex min-h-dvh items-center justify-center bg-surface-muted px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <p className="text-2xl font-bold">
-            Suntec<span className="text-primary">+</span> Play &amp; Win
-          </p>
-          <p className="text-sm text-text-muted">Admin control panel</p>
-        </div>
+        <BrandHero subtitle="Admin control panel" logoWidth={120} />
         <Card className="p-6">
           {!isSupabaseConfigured() ? (
             <Alert tone="warning" title="Not configured">

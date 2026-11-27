@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Montserrat } from 'next/font/google';
 import { EnvBanner } from '@/components/EnvBanner';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
+// Same typeface as sunteccity.com.sg (Google Fonts, SIL Open Font License).
+const montserrat = Montserrat({ subsets: ['latin'], display: 'swap', variable: '--font-montserrat' });
 
 export const metadata: Metadata = {
   title: { default: 'Suntec+ Play & Win', template: '%s · Suntec+ Play & Win' },
@@ -19,7 +20,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-SG" className={inter.variable}>
+    <html lang="en-SG" className={montserrat.variable}>
       <body className="min-h-dvh bg-bg text-text">
         <EnvBanner />
         {children}

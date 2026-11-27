@@ -11,6 +11,7 @@ import { Dialog, ErrorBlock, LoadingBlock, rewardLine } from './bits';
 import { progressText } from './HomeScreen';
 import type { Mission, Summary } from './types';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
+import { SUNTEC } from '@/lib/brand';
 
 function Title({ children, sub }: { children: React.ReactNode; sub?: string }) {
   return (
@@ -627,8 +628,35 @@ export function ProfileScreen() {
           </Button>
         </form>
       </Card>
+      <Card className="mt-4">
+        <h2 className="text-base font-semibold">Visit {SUNTEC.mallName}</h2>
+        <p className="mt-1 text-sm">{SUNTEC.address}</p>
+        <p className="text-sm text-text-muted">{SUNTEC.openingHours}</p>
+        <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm font-medium">
+          {[
+            ['Getting here', SUNTEC.links.gettingHere],
+            ['FAQ', SUNTEC.links.faq],
+            ['Chat with us', SUNTEC.links.chat],
+            ['About Suntec+', SUNTEC.links.aboutSuntecPlus],
+          ].map(([label, href]) => (
+            <li key={href}>
+              <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                {label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </Card>
       <p className="mt-6 text-xs text-text-muted">
-        Your Suntec+ loyalty points and vouchers remain in your Suntec+ account. Play &amp; Win keeps only the data needed to run games and rewards, in line with the PDPA.
+        Your Suntec+ loyalty points and vouchers remain in your Suntec+ account. Play &amp; Win keeps only the data needed to run games and rewards, in line with the PDPA. See the{' '}
+        <a href={SUNTEC.links.terms} target="_blank" rel="noopener noreferrer" className="underline">
+          Terms and Conditions
+        </a>{' '}
+        and{' '}
+        <a href={SUNTEC.links.privacy} target="_blank" rel="noopener noreferrer" className="underline">
+          Privacy Policy
+        </a>
+        .
       </p>
       {signOut && (
         <Button variant="secondary" className="mt-4" onClick={signOut}>
