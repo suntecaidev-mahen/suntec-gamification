@@ -522,3 +522,13 @@ export const RESOURCES: Record<string, ResourceDef> = {
 export function getResource(key: string): ResourceDef | undefined {
   return Object.prototype.hasOwnProperty.call(RESOURCES, key) ? RESOURCES[key] : undefined;
 }
+
+/** Field definitions safe to send to a Client Component (Zod schemas are server-only and not serialisable). */
+export function clientFields(fields: FieldDef[]): FieldDef[] {
+  return fields.map((f) => {
+    const copy = { ...f };
+    delete copy.schema;
+    delete copy.schemaBy;
+    return copy;
+  });
+}

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import QRCode from 'qrcode';
 import { Alert, Button, Card, Field, Input } from '@suntec/ui';
 import { requireStaff } from '@/lib/admin/session';
-import { getResource, type Option } from '@/lib/admin/resources';
+import { clientFields, getResource, type Option } from '@/lib/admin/resources';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { saveInventory, uploadCodes } from '@/lib/admin/actions';
 import { ResourceForm } from '@/components/admin/ResourceForm';
@@ -64,7 +64,7 @@ export default async function ResourceEdit({ params, searchParams }: { params: P
       />
       {saved && <Alert tone="success" className="mb-4">{res.singular} created.</Alert>}
       <div className="max-w-4xl">
-        <ResourceForm resource={res.key} singular={res.singular} fields={res.fields} row={row} options={options} m2mSelected={m2mSelected} canWrite={canWrite} deletable={res.deletable} />
+        <ResourceForm resource={res.key} singular={res.singular} fields={clientFields(res.fields)} row={row} options={options} m2mSelected={m2mSelected} canWrite={canWrite} deletable={res.deletable} />
         {res.key === 'rewards' && row && <RewardStock rewardId={id} canWrite={staff.can('rewards.write')} codePool={isCodePool(row)} />}
         {res.key === 'qr_codes' && row && <QrPanel token={String(row.token)} label={String(row.label)} />}
       </div>
