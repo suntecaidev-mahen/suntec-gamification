@@ -423,6 +423,39 @@ async function engineChecks(db) {
     }
   });
   check((await val(`select count(*)::int from public.audit_log where action = 'member.pp_adjust'`)) === 1, 'admin adjustment written to audit log');
+
+  // Admin editors (0015)
+  const SCRATCH = '21000000-0000-4000-8000-000000000002';
+  const current = (await db.query(`select id, position, label, reward_id, weight_bp from public.game_outcomes where game_id = $1 order by position`, [SCRATCH])).rows;
+  const edited = current.map((o, i) => ({
+    id: o.id, position: o.position, label: o.label, reward_id: o.reward_id, weight_bp: i === 0 ? 2000 : i === 3 ? 4000 : o.weight_bp,
+    fallback_strategy: i === 1 ? 'outcome' : 'renormalize', fallback_position: i === 1 ? 0 : null,
+  }));
+  const bad = edited.map((o, i) => ({ ...o, weight_bp: i === 0 ? 1000 : o.weight_bp }));
+  await asUser(db, 'authenticated', 'aaaaaaaa-0000-4000-8000-0000000000f2', async () => {
+    await expectError(db, 'outcome editor rejects weights that do not total 100%',
+      `select public.admin_save_outcomes('${SCRATCH}', '${JSON.stringify(bad)}')`, /10000 bp/);
+    try {
+      await db.query(`select public.admin_save_outcomes($1, $2)`, [SCRATCH, JSON.stringify(edited)]);
+      ok('outcome editor saves a re-weighted active game atomically (with fallback mapping)');
+    } catch (e) {
+      fail('admin_save_outcomes', e);
+    }
+    try {
+      await db.query(`select public.admin_save_question($1, $2)`, [QUIZ, JSON.stringify({
+        text: 'Which level is the Fountain of Wealth on?', category: 'suntec',
+        options: [{ text: 'B1', is_correct: true }, { text: 'Level 3' }, { text: 'Rooftop' }],
+      })]);
+      ok('quiz editor saves a question with options');
+    } catch (e) {
+      fail('admin_save_question', e);
+    }
+  });
+  await asUser(db, 'authenticated', 'aaaaaaaa-0000-4000-8000-0000000000f1', () =>
+    expectError(db, 'marketing staff cannot edit game probabilities',
+      `select public.admin_save_outcomes('${SCRATCH}', '${JSON.stringify(edited)}')`, /permission/));
+  const fbOk = await val(`select count(*)::int from public.game_outcomes where game_id = $1 and fallback_strategy = 'outcome' and fallback_outcome_id is not null`, [SCRATCH]);
+  check(fbOk === 1, 'fallback outcome linked by position');
 }
 
 main().catch((e) => {
