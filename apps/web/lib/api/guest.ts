@@ -36,17 +36,17 @@ export function newGuestToken(): string {
 }
 
 /** The (unclaimed, not blocked) guest for this browser, or null. */
-export async function findGuest(cookies: CookieReader): Promise<MemberRow | null> {
+export async function findGuest(cookies: CookieReader): Promise<(MemberRow & { claim_code: string | null }) | null> {
   const token = cookies.get(GUEST_COOKIE)?.value;
   if (!token || token.length < 20 || token.length > 100) return null;
   const { data } = await supabaseAdmin()
     .from('members')
-    .select('id, suntec_member_id, status, auth_user_id, email')
+    .select('id, suntec_member_id, status, auth_user_id, email, first_name, claim_code')
     .eq('guest_token_hash', sha256(token))
     .eq('is_guest', true)
     .is('claimed_by', null)
     .maybeSingle();
-  return (data as MemberRow | null) ?? null;
+  return (data as (MemberRow & { claim_code: string | null }) | null) ?? null;
 }
 
 /**

@@ -2,7 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import type { Permission } from '@suntec/core';
-import { createSupabaseServerClient } from '../supabase/server';
+import { createSupabaseServerClient, getVerifiedUser } from '../supabase/server';
 import { isSupabaseConfigured } from '../env';
 
 export interface StaffSession {
@@ -20,18 +20,18 @@ export interface StaffSession {
  */
 export const getStaff = cache(async (): Promise<StaffSession | null> => {
   if (!isSupabaseConfigured()) return null;
+  const user = await getVerifiedUser();
+  if (!user) return null;
   const supabase = await createSupabaseServerClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return null;
   const [{ data: staff }, { data: perms }, { data: roles }] = await Promise.all([
-    supabase.from('staff_users').select('id, email, display_name, active').eq('id', auth.user.id).maybeSingle(),
+    supabase.from('staff_users').select('id, email, display_name, active').eq('id', user.id).maybeSingle(),
     supabase.rpc('my_permissions'),
-    supabase.from('staff_user_roles').select('role_key').eq('user_id', auth.user.id),
+    supabase.from('staff_user_roles').select('role_key').eq('user_id', user.id),
   ]);
   if (!staff || !staff.active) return null;
   const permissions = new Set<string>((perms as string[] | null) ?? []);
   return {
-    userId: auth.user.id,
+    userId: user.id,
     email: staff.email,
     displayName: staff.display_name,
     roles: (roles ?? []).map((r) => r.role_key as string),

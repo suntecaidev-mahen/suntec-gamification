@@ -43,11 +43,16 @@ export async function api<T>(path: string, init: RequestInit & { idempotencyKey?
   return body as T;
 }
 
-export function useApi<T>(path: string | null) {
-  const [data, setData] = useState<T | null>(null);
+/**
+ * Loads `path` from the API. Pass `initial` (data the server already rendered with) to skip
+ * the first request; `reload()` still fetches fresh data.
+ */
+export function useApi<T>(path: string | null, initial?: T | null) {
+  const [data, setData] = useState<T | null>(initial ?? null);
   const [error, setError] = useState<ApiError | null>(null);
-  const [loading, setLoading] = useState(Boolean(path));
+  const [loading, setLoading] = useState(Boolean(path) && !initial);
   const seq = useRef(0);
+  const skipFirst = useRef(Boolean(initial));
 
   const load = useCallback(async () => {
     if (!path) return;
@@ -68,6 +73,10 @@ export function useApi<T>(path: string | null) {
 
   useEffect(() => {
     if (!path) return;
+    if (skipFirst.current) {
+      skipFirst.current = false; // server already provided this data
+      return;
+    }
     const n = ++seq.current;
     api<T>(path).then(
       (d) => {

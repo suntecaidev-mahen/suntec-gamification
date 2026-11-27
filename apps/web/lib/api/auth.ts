@@ -1,14 +1,13 @@
 import 'server-only';
 import type { NextRequest } from 'next/server';
-import type { User } from '@supabase/supabase-js';
 import { supabaseAdmin } from '../supabase/admin';
-import { createSupabaseServerClient } from '../supabase/server';
+import { getVerifiedUser } from '../supabase/server';
 import { enforceRateLimit, fail, sha256 } from './core';
-import { linkMemberForUser, type MemberRow } from './loyalty';
+import { linkMemberForUser, type AuthUser, type MemberRow } from './loyalty';
 import { findGuest } from './guest';
 
 export interface MemberContext {
-  user: User | null;
+  user: AuthUser | null;
   member: MemberRow;
   /** True for a guest playing from the public link (winnings are held until claimed). */
   guest: boolean;
@@ -20,21 +19,20 @@ export interface MemberContext {
  *   - the Supabase session cookie (Play & Win web and in-app), or
  *   - with `{ guests: true }`: the guest cookie of someone playing from the public link.
  * Then maps the auth user to the gamification member (linking by email on first use).
+ * The rate-limit check runs in parallel with the member lookup (one round trip instead of two).
  */
 export async function requireMember(
   req: NextRequest,
   rate: { key: string; limit: number } = { key: 'api', limit: 120 },
   opts: { guests?: boolean } = {},
 ): Promise<MemberContext> {
-  let user: User | null = null;
+  let user: AuthUser | null = null;
   const auth = req.headers.get('authorization');
   if (auth?.toLowerCase().startsWith('bearer ')) {
     const { data } = await supabaseAdmin().auth.getUser(auth.slice(7).trim());
-    user = data.user ?? null;
+    user = data.user ? { id: data.user.id, email: data.user.email ?? null } : null;
   } else {
-    const supabase = await createSupabaseServerClient();
-    const { data } = await supabase.auth.getUser();
-    user = data.user ?? null;
+    user = await getVerifiedUser();
   }
   if (!user) {
     const guest = opts.guests ? await findGuest(req.cookies) : null;
@@ -44,11 +42,10 @@ export async function requireMember(
     return { user: null, member: guest, guest: true };
   }
 
-  const member = await linkMemberForUser(user);
+  // keyed by login id so it can run alongside the member lookup
+  const [member] = await Promise.all([linkMemberForUser(user), enforceRateLimit(`u:${user.id}:${rate.key}`, rate.limit, 60)]);
   if (!member) fail('MEMBER_NOT_LINKED', 'This login is not linked to a Suntec+ membership');
   if (member.status === 'blocked') fail('MEMBER_BLOCKED', 'Your Play & Win access is suspended. Please contact Suntec+ Customer Service.');
-
-  await enforceRateLimit(`m:${member.id}:${rate.key}`, rate.limit, 60);
   return { user, member, guest: false };
 }
 

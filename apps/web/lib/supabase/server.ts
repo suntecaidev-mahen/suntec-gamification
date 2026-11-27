@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@suntec/types';
@@ -28,3 +29,15 @@ export async function createSupabaseServerClient() {
     },
   });
 }
+
+/**
+ * The signed-in user for this request, verified and cached (layout, page and helpers share one
+ * lookup). Uses getClaims(): with Supabase asymmetric JWT signing keys the token is verified
+ * locally (no network round trip); with legacy HS256 keys it falls back to one Auth call.
+ */
+export const getVerifiedUser = cache(async (): Promise<{ id: string; email: string | null } | null> => {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.getClaims();
+  if (error || !data?.claims?.sub) return null;
+  return { id: data.claims.sub, email: (data.claims.email as string | undefined) ?? null };
+});

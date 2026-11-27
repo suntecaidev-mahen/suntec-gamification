@@ -20,9 +20,9 @@ export function availabilityLabel(a: Availability | null | undefined): string {
   return 'No plays left today';
 }
 
-export function HomeScreen({ claimed }: { claimed?: string }) {
+export function HomeScreen({ claimed, initial }: { claimed?: string; initial?: Home | null }) {
   const { base, refreshBalance, viewer } = usePlay();
-  const { data, error, loading, reload } = useApi<Home>('/home');
+  const { data, error, loading, reload } = useApi<Home>('/home', initial);
   if (loading && !data) return <LoadingBlock lines={4} />;
   if (error && !data) return <ErrorBlock error={error} retry={reload} />;
   if (!data) return null;

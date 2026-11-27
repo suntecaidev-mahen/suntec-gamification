@@ -1,6 +1,7 @@
 import 'server-only';
+import { cache } from 'react';
 import { cookies } from 'next/headers';
-import { createSupabaseServerClient } from '../supabase/server';
+import { getVerifiedUser } from '../supabase/server';
 import { supabaseAdmin } from '../supabase/admin';
 import { linkMemberForUser } from '../api/loyalty';
 import { APP_COOKIE, findGuest } from '../api/guest';
@@ -23,27 +24,25 @@ export type PlayGateResult =
  * Who is playing? In order: a signed-in Suntec+ member (from the app or a web sign-in),
  * otherwise this browser's guest, otherwise a new visitor.
  */
-export async function resolvePlayMember(): Promise<PlayGateResult> {
+export const resolvePlayMember = cache(async (): Promise<PlayGateResult> => {
   if (!isSupabaseConfigured()) return { state: 'unconfigured' };
   const jar = await cookies();
   const mode: PlayMode = jar.get(APP_COOKIE)?.value === '1' ? 'app' : 'web';
-  const { data } = await (await createSupabaseServerClient()).auth.getUser();
+  const user = await getVerifiedUser();
 
-  if (data.user) {
-    const member = await linkMemberForUser(data.user);
-    if (!member) return { state: 'not_linked', email: data.user.email ?? null, demo: serverEnv().LOYALTY_ADAPTER === 'mock' };
+  if (user) {
+    const member = await linkMemberForUser(user);
+    if (!member) return { state: 'not_linked', email: user.email ?? null, demo: serverEnv().LOYALTY_ADAPTER === 'mock' };
     if (member.status === 'blocked') return { state: 'blocked' };
-    const { data: m } = await supabaseAdmin().from('members').select('first_name').eq('id', member.id).single();
-    return { state: 'ok', memberId: member.id, mode, viewer: { guest: false, firstName: m?.first_name ?? null, claimCode: null } };
+    return { state: 'ok', memberId: member.id, mode, viewer: { guest: false, firstName: member.first_name ?? null, claimCode: null } };
   }
 
   if (mode === 'app') return { state: 'app_session_ended' };
   const guest = await findGuest(jar);
   if (!guest) return { state: 'new_visitor' };
   if (guest.status === 'blocked') return { state: 'blocked' };
-  const { data: g } = await supabaseAdmin().from('members').select('claim_code').eq('id', guest.id).single();
-  return { state: 'ok', memberId: guest.id, mode: 'web', viewer: { guest: true, firstName: null, claimCode: g?.claim_code ?? null } };
-}
+  return { state: 'ok', memberId: guest.id, mode: 'web', viewer: { guest: true, firstName: null, claimCode: guest.claim_code } };
+});
 
 /** DEV/SIT only: demo members from the mock Capillary schema. */
 export async function listDemoMembers(): Promise<{ member_id: string; name: string; tier: string; linked: boolean }[]> {

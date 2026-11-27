@@ -27,8 +27,9 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // Touching the user revalidates/refreshes the token. Do not remove.
-  await supabase.auth.getUser();
+  // Refreshes an expired access token (rewrites the cookie). No Auth-server call unless a refresh is due;
+  // the identity itself is verified by each page/route (getVerifiedUser / requireMember). Do not remove.
+  await supabase.auth.getSession();
   return response;
 }
 

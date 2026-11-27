@@ -9,9 +9,9 @@ import { Wheel, rotationForSegment } from './Wheel';
 import { availabilityLabel } from './HomeScreen';
 import type { Availability, GameDetail, Session } from './types';
 
-export function GameScreen({ id }: { id: string }) {
+export function GameScreen({ id, initial }: { id: string; initial?: GameDetail | null }) {
   const { base } = usePlay();
-  const { data, error, loading, reload } = useApi<GameDetail>(`/games/${id}`);
+  const { data, error, loading, reload } = useApi<GameDetail>(`/games/${id}`, initial);
   if (loading && !data) return <LoadingBlock lines={3} />;
   if (error && !data) return <ErrorBlock error={error} retry={reload} />;
   if (!data) return null;
