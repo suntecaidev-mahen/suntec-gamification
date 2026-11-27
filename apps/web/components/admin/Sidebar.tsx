@@ -36,7 +36,7 @@ export function Sidebar({ groups, user, signOut, envTag = null }: { groups: NavG
         <nav aria-label="Admin">
           {groups.map((g) => (
             <div key={g.title} className="mb-4">
-              <p className="px-3 pb-1 text-sm font-bold uppercase tracking-wide text-brand-navy">{g.title}</p>
+              <p className="px-3 pb-1 text-sm font-bold text-brand-navy">{g.title}</p>
               <ul>
                 {g.items.map((it) => (
                   <li key={it.href}>
