@@ -243,6 +243,8 @@ async function main() {
     ? ok('audit_log captured staff campaign insert')
     : fail(`audit missing: ${JSON.stringify(audit.rows)}`);
 
+  await engineChecks(db);
+
   await db.close();
 
   // The consolidated file the user pastes into the SQL Editor must also work on a fresh database.
@@ -268,6 +270,159 @@ async function main() {
 
   console.log(failures ? `\n${failures} check(s) FAILED` : '\nAll SQL checks passed.');
   process.exit(failures ? 1 : 0);
+}
+
+// ---------------------------------------------------------------------------
+// Engine (Phase 2) behaviour checks — run as the service role equivalent.
+// ---------------------------------------------------------------------------
+async function engineChecks(db) {
+  if (!existsSync(seedFile)) return;
+  console.log('\nEngine checks');
+  const one = async (sql, params = []) => (await db.query(sql, params)).rows[0];
+  const val = async (sql, params = []) => {
+    const r = await one(sql, params);
+    return r ? Object.values(r)[0] : undefined;
+  };
+  const check = (cond, label, extra) => (cond ? ok(label) : fail(`${label}${extra ? ` — ${JSON.stringify(extra)}` : ''}`));
+  const expectCode = async (label, sql, code) => {
+    try {
+      await db.query(sql);
+      fail(`${label} (expected ${code})`);
+    } catch (e) {
+      const hint = e.hint ?? '';
+      hint === code || e.message.includes(code) ? ok(label) : fail(`${label} (got ${hint || e.message})`);
+    }
+  };
+
+  const WHEEL = '21000000-0000-4000-8000-000000000001';
+  const QUIZ = '21000000-0000-4000-8000-000000000003';
+  const A = await val(`select public.ensure_member('SUN-00010001', '{"first_name":"Ah Kow","last_name":"Tan","tier":"gold","card_no":"6012000010001","email":"tan.demo@example.com"}')`);
+  const B = await val(`select public.ensure_member('SUN-00010002', '{"first_name":"Mei Ling","last_name":"Lim","tier":"platinum"}')`);
+  const A2 = await val(`select public.ensure_member('SUN-00010001', '{"tier":"platinum"}')`);
+  check(A && A === A2, 'ensure_member is idempotent and refreshes profile');
+
+  // Check-in
+  const c1 = await val(`select public.checkin($1)`, [A]);
+  check(c1.checked_in && c1.streak === 1 && c1.rewards.length === 1, 'daily check-in awards base reward and starts streak', c1);
+  const c2 = await val(`select public.checkin($1)`, [A]);
+  check(c2.already === true, 'second check-in on the same day is rejected as already done');
+  check((await val(`select pp_balance from public.member_profiles where member_id = $1`, [A])) === 10n || (await val(`select pp_balance::int from public.member_profiles where member_id = $1`, [A])) === 10, 'check-in credited 10 Play Points to the ledger');
+  check((await val(`select count(*)::int from public.member_badges mb join public.badges b on b.id = mb.badge_id where mb.member_id = $1 and b.key = 'first-checkin'`, [A])) === 1, 'First Check-in badge awarded automatically');
+
+  // Spin & Win
+  const s1 = await val(`select public.game_start($1, $2, 'spin-test-0001')`, [A, WHEEL]);
+  check(s1.status === 'completed' && typeof s1.outcome.position === 'number' && s1.payment_source === 'free', 'spin decided server-side with free daily attempt', s1);
+  check(!JSON.stringify(s1).includes('weight'), 'spin response contains no probability weights');
+  const s1r = await val(`select public.game_start($1, $2, 'spin-test-0001')`, [A, WHEEL]);
+  check(s1r.id === s1.id && s1r.replay === true, 'same Idempotency-Key replays the same session (no double play)');
+  await expectCode('cooldown enforced between plays', `select public.game_start('${A}', '${WHEEL}', 'spin-test-0002')`, 'COOLDOWN');
+
+  // Quiz (member B)
+  const q1 = await val(`select public.game_start($1, $2, 'quiz-test-0001')`, [B, QUIZ]);
+  check(q1.status === 'in_progress' && q1.questions.length === 5, 'quiz session serves 5 questions', q1);
+  check(!JSON.stringify(q1).includes('is_correct'), 'quiz questions are served without answers');
+  const answers = [];
+  for (const q of q1.questions) {
+    const right = await val(`select id from public.quiz_options where question_id = $1 and is_correct`, [q.id]);
+    answers.push({ question_id: q.id, option_id: right });
+  }
+  const q2 = await val(`select public.quiz_submit($1, $2, $3)`, [B, q1.id, JSON.stringify(answers)]);
+  check(q2.status === 'completed' && q2.correct_count === 5 && q2.outcome.passed && q2.outcome.reward?.name === '100 Play Points',
+    'quiz scored server-side; 5/5 earns the top reward tier', q2.outcome);
+  check(q2.results.length === 5 && q2.results.every((r) => r.correct), 'quiz results reveal correct answers only after submission');
+  await expectCode('quiz daily limit enforced', `select public.game_start('${B}', '${QUIZ}', 'quiz-test-0002')`, 'LIMIT_REACHED');
+
+  // RNG distribution & out-of-stock fallback
+  const draws = (await db.query(`select (public.draw_outcome('${WHEEL}') ->> 'outcome_id') as o from generate_series(1, 4000)`)).rows;
+  const counts = {};
+  for (const r of draws) counts[r.o] = (counts[r.o] ?? 0) + 1;
+  const outs = (await db.query(`select id, weight_bp from public.game_outcomes where game_id = $1`, [WHEEL])).rows;
+  let chi = 0;
+  for (const o of outs) {
+    const exp = (4000 * o.weight_bp) / 10000;
+    chi += ((counts[o.id] ?? 0) - exp) ** 2 / exp;
+  }
+  check(chi < 24.3, `weighted draw matches configured probabilities (chi² = ${chi.toFixed(2)}, df=7, p>0.001)`);
+  await db.exec(`update public.reward_inventory set remaining_qty = 0 where reward_id = '12000000-0000-4000-8000-000000000011'`);
+  const kopi = await val(`select count(*)::int from (select public.draw_outcome('${WHEEL}') d from generate_series(1, 1500)) x
+                          where d->>'outcome_id' = '22000000-0000-4000-8000-000000000005'`);
+  const fb = await val(`select count(*)::int from (select public.draw_outcome('${WHEEL}') d from generate_series(1, 1500)) x
+                        where d->>'drawn_id' = '22000000-0000-4000-8000-000000000005' and d->>'outcome_id' = '22000000-0000-4000-8000-000000000001'`);
+  check(kopi === 0 && fb > 0, 'out-of-stock prize is never awarded; configured fallback outcome is used instead', { kopi, fb });
+  await db.exec(`update public.reward_inventory set remaining_qty = 2 where reward_id = '12000000-0000-4000-8000-000000000011'`);
+  const k1 = await val(`select public.allocate_reward($1, '12000000-0000-4000-8000-000000000011', 1, 'admin', 'stock-1')`, [B]);
+  const k2 = await val(`select public.allocate_reward($1, '12000000-0000-4000-8000-000000000011', 1, 'admin', 'stock-2')`, [B]);
+  const k3 = await val(`select public.allocate_reward($1, '12000000-0000-4000-8000-000000000011', 1, 'admin', 'stock-3')`, [B]);
+  check(k1.ok && k2.ok && k1.voucher_code && k1.voucher_code !== k2.voucher_code && k3.ok === false && k3.reason === 'out_of_stock',
+    'inventory never oversells: unique pool codes, third allocation out of stock', { k1: k1.voucher_code, k2: k2.voucher_code, k3 });
+
+  // Events → missions → rewards
+  const ev = `select public.ingest_event('pos', null, 'transaction', 'TX-1001', 'SUN-00010001', now(), '{"amount_cents":6000,"merchant_code":"M-0101"}')`;
+  const e1 = await val(ev);
+  const e2 = await val(ev);
+  check(e1.status === 'processed' && e2.duplicate === true, 'inbound events are processed once (dedupe on external id)');
+  const mp = await one(`select p.completed_at, p.rewarded_at from public.mission_progress p join public.missions m on m.id = p.mission_id
+                        where m.key = 'spend-50' and p.member_id = $1`, [A]);
+  check(mp?.completed_at && mp?.rewarded_at, 'spend $50 mission completed and rewarded from a POS transaction');
+  check((await val(`select balance from public.attempt_balances where member_id = $1 and game_id = $2`, [A, WHEEL])) >= 1, 'mission reward granted a bonus spin');
+
+  // Capillary points via outbox + mock adapter
+  const cap = await val(`select public.allocate_reward($1, '12000000-0000-4000-8000-000000000007', 1, 'admin', 'cap-test-1')`, [A]);
+  check(cap.status === 'pending', 'Suntec+ points reward is queued (pending) — never stored as a local balance');
+  const claimed = (await db.query(`select * from public.outbox_claim(10, array[(select id from public.outbox where aggregate_id = '${cap.id}')])`)).rows;
+  check(claimed.length === 1 && claimed[0].kind === 'loyalty.award_points', 'outbox job claimed for delivery');
+  const award = await val(`select public.mock_cap_award_points('SUN-00010001', 100, $1, 'test')`, [cap.id]);
+  const award2 = await val(`select public.mock_cap_award_points('SUN-00010001', 100, $1, 'test')`, [cap.id]);
+  check(award.external_ref === award2.external_ref && award2.replay, 'mock Capillary award is idempotent per transaction id');
+  await val(`select public.outbox_complete($1, true, $2)`, [claimed[0].id, JSON.stringify({ external_ref: award.external_ref })]);
+  const capAfter = await one(`select status::text, external_ref from public.reward_transactions where id = $1`, [cap.id]);
+  check(capAfter.status === 'issued' && capAfter.external_ref === award.external_ref, 'delivered reward marked issued with Capillary reference');
+
+  // Catalogue redemption
+  await val(`select public.pp_post($1, 2000, 'admin_adjust', 'test', 'x', 'test-topup')`, [A]);
+  const red = await val(`select public.reward_redeem($1, '12000000-0000-4000-8000-000000000009', 'redeem-test-001')`, [A]);
+  const red2 = await val(`select public.reward_redeem($1, '12000000-0000-4000-8000-000000000009', 'redeem-test-001')`, [A]);
+  check(red.status === 'pending' && red.pp_cost === 800 && red2.replay && red2.id === red.id, 'Play Points redemption is atomic and idempotent', { status: red.status });
+  await expectCode('cannot spend more Play Points than the balance',
+    `select public.reward_redeem('${B}', '12000000-0000-4000-8000-000000000013', 'redeem-test-002')`, 'INSUFFICIENT_PP');
+
+  // QR + leaderboard + maintenance
+  const qr = await val(`select public.qr_scan($1, 'DEMO-MALL-VISIT-FOUNTAIN')`, [B]);
+  check(qr.purpose === 'visit', 'QR mall-visit scan accepted');
+  await expectCode('QR per-member daily limit enforced', `select public.qr_scan('${B}', 'DEMO-MALL-VISIT-FOUNTAIN')`, 'ALREADY_SCANNED');
+  const lb = await val(`select public.leaderboard_view('27000000-0000-4000-8000-000000000001', 'daily', $1)`, [A]);
+  check(lb.entries.length >= 2 && lb.me?.rank >= 1 && !JSON.stringify(lb.entries).includes('Tan'), 'leaderboard ranks members with masked names', lb.entries);
+  const tick = await val(`select public.maintenance_tick()`);
+  check(tick && typeof tick.sessions_expired === 'number', 'maintenance_tick runs');
+  const idem = [
+    await val(`select public.idem_begin('t', 'k1', 'h1')`),
+    await val(`select public.idem_begin('t', 'k1', 'h2')`),
+  ];
+  await val(`select public.idem_complete('t', 'k1', 200, '{"a":1}')`);
+  const idem3 = await val(`select public.idem_begin('t', 'k1', 'h1')`);
+  check(idem[0].state === 'new' && idem[1].state === 'mismatch' && idem3.state === 'replay', 'idempotency store: new → mismatch → replay');
+  const rl = [];
+  for (let i = 0; i < 3; i++) rl.push(await val(`select public.rate_limit_hit('t:1', 2, 60)`));
+  check(rl[1].allowed && !rl[2].allowed, 'rate limiter blocks after the limit');
+
+  // Privileges
+  await asUser(db, 'authenticated', 'aaaaaaaa-0000-4000-8000-0000000000f1', () =>
+    expectError(db, 'signed-in users cannot call engine functions directly',
+      `select public.game_start('${A}', '${WHEEL}', 'hack-hack-01')`, /permission denied/));
+  await asUser(db, 'authenticated', 'aaaaaaaa-0000-4000-8000-0000000000f1', () =>
+    expectError(db, 'marketing staff cannot adjust Play Points (admin RPC checks permission)',
+      `select public.admin_adjust_pp('${A}', 100, 'test', 'abc')`, /permission/));
+  await asUser(db, 'authenticated', 'aaaaaaaa-0000-4000-8000-0000000000f2', async () => {
+    try {
+      const d = (await db.query(`select public.admin_dashboard() as d`)).rows[0].d;
+      const s = (await db.query(`select public.admin_customer_search('SUN-0001') as s`)).rows[0].s;
+      const adj = (await db.query(`select public.admin_adjust_pp('${A}', 50, 'goodwill', 'adj-1') as a`)).rows[0].a;
+      check(d.plays_today >= 2 && s.length >= 1 && adj.pp_balance > 0, 'super admin can use dashboard, customer search and adjustments');
+    } catch (e) {
+      fail('super admin RPCs', e);
+    }
+  });
+  check((await val(`select count(*)::int from public.audit_log where action = 'member.pp_adjust'`)) === 1, 'admin adjustment written to audit log');
 }
 
 main().catch((e) => {
