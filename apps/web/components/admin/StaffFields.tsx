@@ -1,6 +1,6 @@
 import { Checkbox, Field, Input, Select, type BadgeTone } from '@suntec/ui';
 
-export const DEPARTMENTS = ['Management', 'Marketing', 'Customer Service', 'Concierge', 'Leasing', 'Operations', 'Finance', 'IT'];
+export const DEPARTMENTS = ['Digital & Application', 'Marketing', 'Customer Service', 'Concierge', 'Leasing', 'Operations', 'Finance', 'IT'];
 
 export type StaffStatus = 'Invited' | 'Active' | 'Deactivated';
 export const STATUS_TONE: Record<StaffStatus, BadgeTone> = { Invited: 'warning', Active: 'success', Deactivated: 'neutral' };
@@ -30,12 +30,16 @@ export function StaffFields({
         <Input id="email" name="email" type="email" defaultValue={value?.email ?? ''} required={!editing} disabled={editing} autoComplete="off" />
       </Field>
       <Field id="department" label="Department">
-        <Input id="department" name="department" list="departments" defaultValue={value?.department ?? ''} placeholder="e.g. Marketing" />
-        <datalist id="departments">
+        <Select id="department" name="department" defaultValue={value?.department ?? ''}>
+          <option value="">Choose a department…</option>
+          {/* keep a department saved earlier even if it is no longer in the list */}
+          {value?.department && !DEPARTMENTS.includes(value.department) && <option value={value.department}>{value.department}</option>}
           {DEPARTMENTS.map((d) => (
-            <option key={d} value={d} />
+            <option key={d} value={d}>
+              {d}
+            </option>
           ))}
-        </datalist>
+        </Select>
       </Field>
       <Field id="role" label="Access level" required help={roles.find((r) => r.key === (value?.role ?? 'read_only'))?.description}>
         <Select id="role" name="role" defaultValue={value?.role ?? 'read_only'} required>
