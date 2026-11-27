@@ -306,7 +306,7 @@ async function engineChecks(db) {
   check(c1.checked_in && c1.streak === 1 && c1.rewards.length === 1, 'daily check-in awards base reward and starts streak', c1);
   const c2 = await val(`select public.checkin($1)`, [A]);
   check(c2.already === true, 'second check-in on the same day is rejected as already done');
-  check((await val(`select pp_balance from public.member_profiles where member_id = $1`, [A])) === 10n || (await val(`select pp_balance::int from public.member_profiles where member_id = $1`, [A])) === 10, 'check-in credited 10 Play Points to the ledger');
+  check(c1.rewards[0].type === 'capillary_points' && c1.rewards[0].status === 'pending' && Number(c1.rewards[0].amount) === 10, 'check-in awards 10 Suntec+ Points (queued for Capillary, no local balance)', c1.rewards[0]);
   check((await val(`select count(*)::int from public.member_badges mb join public.badges b on b.id = mb.badge_id where mb.member_id = $1 and b.key = 'first-checkin'`, [A])) === 1, 'First Check-in badge awarded automatically');
 
   // Spin & Win
@@ -327,7 +327,7 @@ async function engineChecks(db) {
     answers.push({ question_id: q.id, option_id: right });
   }
   const q2 = await val(`select public.quiz_submit($1, $2, $3)`, [B, q1.id, JSON.stringify(answers)]);
-  check(q2.status === 'completed' && q2.correct_count === 5 && q2.outcome.passed && q2.outcome.reward?.name === '100 Play Points',
+  check(q2.status === 'completed' && q2.correct_count === 5 && q2.outcome.passed && q2.outcome.reward?.name === '100 Suntec+ Points',
     'quiz scored server-side; 5/5 earns the top reward tier', q2.outcome);
   check(q2.results.length === 5 && q2.results.every((r) => r.correct), 'quiz results reveal correct answers only after submission');
   await expectCode('quiz daily limit enforced', `select public.game_start('${B}', '${QUIZ}', 'quiz-test-0002')`, 'LIMIT_REACHED');
@@ -378,15 +378,47 @@ async function engineChecks(db) {
   const capAfter = await one(`select status::text, external_ref from public.reward_transactions where id = $1`, [cap.id]);
   check(capAfter.status === 'issued' && capAfter.external_ref === award.external_ref, 'delivered reward marked issued with Capillary reference');
 
-  // Catalogue redemption
-  await val(`select public.pp_post($1, 2000, 'admin_adjust', 'test', 'x', 'test-topup')`, [A]);
-  const red = await val(`select public.reward_redeem($1, '12000000-0000-4000-8000-000000000009', 'redeem-test-001')`, [A]);
-  const red2 = await val(`select public.reward_redeem($1, '12000000-0000-4000-8000-000000000009', 'redeem-test-001')`, [A]);
-  check(red.status === 'pending' && red.pp_cost === 800 && red2.replay && red2.id === red.id, 'Play Points redemption is atomic and idempotent', { status: red.status });
-  await expectCode('cannot spend more Play Points than the balance',
-    `select public.reward_redeem('${B}', '12000000-0000-4000-8000-000000000013', 'redeem-test-002')`, 'INSUFFICIENT_PP');
+  // Guest play: held winnings, claim to a Suntec+ member
+  const gTok = 'a'.repeat(64);
+  const g1 = await val(`select public.guest_create($1, 'dev-guest-1')`, [gTok]);
+  const g1b = await val(`select public.guest_create($1)`, [gTok]);
+  check(g1.member_id && g1.member_id === g1b.member_id && /^[2-9A-HJ-NP-TV-Z]{8}$/.test(g1.claim_code), 'guest_create is idempotent per browser token and issues a claim code', g1);
+  const G = g1.member_id;
+  const gWin = await val(`select public.allocate_reward($1, '12000000-0000-4000-8000-000000000007', 1, 'admin', 'guest-test-1')`, [G]);
+  check(gWin.ok && gWin.status === 'held' && gWin.held === true, 'guest win is held (not sent to Capillary)', gWin);
+  check((await val(`select count(*)::int from public.outbox where aggregate_id = $1`, [gWin.id])) === 0, 'held guest win creates no outbox delivery');
+  const gPool = await val(`select public.allocate_reward($1, '12000000-0000-4000-8000-000000000011', 1, 'admin', 'guest-test-2')`, [G]);
+  check(gPool.ok === false, 'code-pool vouchers are not given to guests');
+  check((await val(`select public.reward_available('12000000-0000-4000-8000-000000000011', $1)`, [G])) === false, 'draw treats code-pool prizes as unavailable for guests');
+  const gCi = await val(`select public.checkin($1)`, [G]);
+  check(gCi.checked_in && gCi.rewards[0].status === 'held', 'guest can check in; reward held', gCi.rewards[0]);
+  const gSum = await val(`select public.member_summary($1)`, [G]);
+  check(gSum.is_guest && gSum.claim.code === g1.claim_code && Number(gSum.held.points) === 110 && gSum.member.suntec_member_id === null,
+    'guest summary shows held points and claim code (no fake member id)', gSum.held);
+  await expectCode('claim code must be valid', `select public.guest_claim('${A}', 'ZZZZ-ZZZZ')`, 'INVALID_CLAIM');
+  await expectCode('a guest cannot claim winnings', `select public.guest_claim('${G}', '${g1.claim_code}')`, 'INVALID');
+  const pretty = g1.claim_code.slice(0, 4).toLowerCase() + '-' + g1.claim_code.slice(4);
+  const cl = await val(`select public.guest_claim($1, $2)`, [A, pretty]);
+  check(cl.claimed && cl.rewards === 2 && Number(cl.points) === 110, 'member claims held winnings with the code (case/dash-insensitive)', cl);
+  const moved = await one(`select member_id, status::text from public.reward_transactions where id = $1`, [gWin.id]);
+  check(moved.member_id === A && moved.status === 'pending', 'claimed points moved to the member and queued for Capillary', moved);
+  check((await val(`select count(*)::int from public.outbox where aggregate_id = $1 and kind = 'loyalty.award_points' and payload->>'suntec_member_id' = 'SUN-00010001'`, [gWin.id])) === 1,
+    "claimed points delivered to the member's Suntec+ account (outbox)");
+  const cl2 = await val(`select public.guest_claim($1, $2)`, [A, g1.claim_code]);
+  check(cl2.already === true, 're-claiming by the same member is a no-op');
+  await expectCode('claim code cannot be used by a second member', `select public.guest_claim('${B}', '${g1.claim_code}')`, 'CLAIM_USED');
+  const g2 = await val(`select public.guest_create($1)`, ['b'.repeat(64)]);
+  await val(`select public.allocate_reward($1, '12000000-0000-4000-8000-000000000009', 1, 'admin', 'guest-test-3')`, [g2.member_id]);
+  const invBefore = await val(`select remaining_qty from public.reward_inventory where reward_id = '12000000-0000-4000-8000-000000000009'`);
+  await db.query(`update public.reward_transactions set expires_at = now() - interval '1 minute' where member_id = $1`, [g2.member_id]);
+  const gm = await val(`select public.guest_maintenance()`);
+  const invAfter = await val(`select remaining_qty from public.reward_inventory where reward_id = '12000000-0000-4000-8000-000000000009'`);
+  check(gm.held_rewards_expired === 1 && invAfter === invBefore + 1, 'unclaimed held winnings expire and stock is returned', { gm, invBefore, invAfter });
+  check((await val(`select count(*)::int from public.rewards where type = 'play_points' or in_catalogue`)) === 0, 'Suntec+ points only: no Play Points rewards or catalogue items');
 
   // QR + leaderboard + maintenance
+  await val(`select public.lb_add($1, 'play_points_earned', 50)`, [A]);
+  await val(`select public.lb_add($1, 'play_points_earned', 30)`, [B]);
   const qr = await val(`select public.qr_scan($1, 'DEMO-MALL-VISIT-FOUNTAIN')`, [B]);
   check(qr.purpose === 'visit', 'QR mall-visit scan accepted');
   await expectCode('QR per-member daily limit enforced', `select public.qr_scan('${B}', 'DEMO-MALL-VISIT-FOUNTAIN')`, 'ALREADY_SCANNED');

@@ -37,7 +37,6 @@ on conflict (id) do nothing;
 -- Reward categories & rewards
 -- ---------------------------------------------------------------------------
 insert into public.reward_categories (id, key, name, icon, sort) values
-  ('11000000-0000-4000-8000-000000000001', 'play_points',   'Play Points',       'star',      10),
   ('11000000-0000-4000-8000-000000000002', 'suntec_points', 'Suntec+ Points',    'coins',     20),
   ('11000000-0000-4000-8000-000000000003', 'dining',        'Dining Vouchers',   'utensils',  30),
   ('11000000-0000-4000-8000-000000000004', 'retail',        'Retail Vouchers',   'bag',       40),
@@ -62,29 +61,29 @@ on conflict (id) do nothing;
 
 insert into public.rewards (id, category_id, campaign_id, key, type, name, description, value, unit_cost_cents,
                             in_catalogue, pp_cost, validity_days, per_member_cap, per_member_period, sort) values
-  -- Play Points (internal currency)
-  ('12000000-0000-4000-8000-000000000001', '11000000-0000-4000-8000-000000000001', null, 'pp-10',  'play_points', '10 Play Points',  'Daily check-in reward', '{"amount":10}',  0, false, null, null, null, 'once', 10),
-  ('12000000-0000-4000-8000-000000000002', '11000000-0000-4000-8000-000000000001', null, 'pp-20',  'play_points', '20 Play Points',  '', '{"amount":20}',  0, false, null, null, null, 'once', 11),
-  ('12000000-0000-4000-8000-000000000003', '11000000-0000-4000-8000-000000000001', null, 'pp-50',  'play_points', '50 Play Points',  '', '{"amount":50}',  0, false, null, null, null, 'once', 12),
-  ('12000000-0000-4000-8000-000000000004', '11000000-0000-4000-8000-000000000001', null, 'pp-100', 'play_points', '100 Play Points', '', '{"amount":100}', 0, false, null, null, null, 'once', 13),
-  ('12000000-0000-4000-8000-000000000005', '11000000-0000-4000-8000-000000000001', null, 'pp-200', 'play_points', '200 Play Points', '', '{"amount":200}', 0, false, null, null, null, 'once', 14),
+  -- Suntec+ loyalty points (awarded in Capillary via the LoyaltyAdapter; held for guests until claimed)
+  ('12000000-0000-4000-8000-000000000001', '11000000-0000-4000-8000-000000000002', null, 'pp-10', 'capillary_points', '10 Suntec+ Points', 'Daily check-in reward', '{"points":10}',  0, false, null, null, null, 'once', 10),
+  ('12000000-0000-4000-8000-000000000002', '11000000-0000-4000-8000-000000000002', null, 'pp-20', 'capillary_points', '20 Suntec+ Points', 'Credited to your Suntec+ account', '{"points":20}',  0, false, null, null, null, 'once', 11),
+  ('12000000-0000-4000-8000-000000000003', '11000000-0000-4000-8000-000000000002', null, 'pp-50', 'capillary_points', '50 Suntec+ Points', 'Credited to your Suntec+ account', '{"points":50}',  0, false, null, null, null, 'once', 12),
+  ('12000000-0000-4000-8000-000000000004', '11000000-0000-4000-8000-000000000002', null, 'pp-100', 'capillary_points', '100 Suntec+ Points', 'Credited to your Suntec+ account', '{"points":100}', 0, false, null, null, null, 'once', 13),
+  ('12000000-0000-4000-8000-000000000005', '11000000-0000-4000-8000-000000000002', null, 'pp-200', 'capillary_points', '200 Suntec+ Points', 'Credited to your Suntec+ account', '{"points":200}', 0, false, null, null, null, 'once', 14),
   -- Bonus attempt (game_id filled in after games exist)
   ('12000000-0000-4000-8000-000000000006', '11000000-0000-4000-8000-000000000007', '20000000-0000-4000-8000-000000000001', 'bonus-spin', 'bonus_attempt', 'Bonus Spin', 'One extra spin on the Year-End Spin wheel', '{"count":1,"game_id":null}', 0, false, null, null, null, 'once', 20),
   -- Suntec+ loyalty points — awarded in Capillary via the LoyaltyAdapter
   ('12000000-0000-4000-8000-000000000007', '11000000-0000-4000-8000-000000000002', null, 'cap-100', 'capillary_points', '100 Suntec+ Points', 'Credited to your Suntec+ account', '{"points":100}', 50,  false, null, null, null, 'once', 30),
-  ('12000000-0000-4000-8000-000000000008', '11000000-0000-4000-8000-000000000002', null, 'cap-500', 'capillary_points', '500 Suntec+ Points', 'Credited to your Suntec+ account', '{"points":500}', 250, true,  1000, null, 5, 'monthly', 31),
+  ('12000000-0000-4000-8000-000000000008', '11000000-0000-4000-8000-000000000002', null, 'cap-500', 'capillary_points', '500 Suntec+ Points', 'Credited to your Suntec+ account', '{"points":500}', 250, false, null, null, 5, 'monthly', 31),
   -- Vouchers (VMS series)
-  ('12000000-0000-4000-8000-000000000009', '11000000-0000-4000-8000-000000000003', null, 'din-5',  'digital_voucher',  '$5 Dining Voucher',  'Valid at participating dining outlets', '{"series_id":"DIN5","face_value_cents":500}', 500, true, 800, 30, 3, 'monthly', 40),
-  ('12000000-0000-4000-8000-000000000010', '11000000-0000-4000-8000-000000000004', null, 'ret-10', 'merchant_voucher', '$10 Urban Threads Voucher', 'Min. spend $50', '{"merchant_id":"10000000-0000-4000-8000-000000000003","source":"vms","series_id":"RET10","face_value_cents":1000}', 1000, true, 1500, 14, 1, 'monthly', 41),
+  ('12000000-0000-4000-8000-000000000009', '11000000-0000-4000-8000-000000000003', null, 'din-5',  'digital_voucher',  '$5 Dining Voucher',  'Valid at participating dining outlets', '{"series_id":"DIN5","face_value_cents":500}', 500, false, null, 30, 3, 'monthly', 40),
+  ('12000000-0000-4000-8000-000000000010', '11000000-0000-4000-8000-000000000004', null, 'ret-10', 'merchant_voucher', '$10 Urban Threads Voucher', 'Min. spend $50', '{"merchant_id":"10000000-0000-4000-8000-000000000003","source":"vms","series_id":"RET10","face_value_cents":1000}', 1000, false, null, 14, 1, 'monthly', 41),
   ('12000000-0000-4000-8000-000000000011', '11000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', 'coffee-free', 'merchant_voucher', 'Free Kopi at Kopi & Co.', 'One regular kopi or teh', '{"merchant_id":"10000000-0000-4000-8000-000000000002","source":"code_pool","face_value_cents":350}', 350, false, null, 14, null, 'once', 42),
   -- Gifts, privileges, exclusive
-  ('12000000-0000-4000-8000-000000000012', '11000000-0000-4000-8000-000000000005', null, 'tote-bag', 'promo_gift', 'Suntec+ Festive Tote Bag', 'Collect at the Concierge, Tower 3 Level 1', '{"collect_at":"Concierge, Tower 3 Level 1"}', 800, true, 1500, 30, 1, 'once', 50),
-  ('12000000-0000-4000-8000-000000000013', '11000000-0000-4000-8000-000000000006', null, 'vip-lounge', 'privilege', 'VIP Lounge Pass (30 days)', 'Members'' lounge access for 30 days', '{"duration_days":30,"benefit":"VIP lounge access"}', 1500, true, 3000, 30, 1, 'monthly', 60),
+  ('12000000-0000-4000-8000-000000000012', '11000000-0000-4000-8000-000000000005', null, 'tote-bag', 'promo_gift', 'Suntec+ Festive Tote Bag', 'Collect at the Concierge, Tower 3 Level 1', '{"collect_at":"Concierge, Tower 3 Level 1"}', 800, false, null, 30, 1, 'once', 50),
+  ('12000000-0000-4000-8000-000000000013', '11000000-0000-4000-8000-000000000006', null, 'vip-lounge', 'privilege', 'VIP Lounge Pass (30 days)', 'Members'' lounge access for 30 days', '{"duration_days":30,"benefit":"VIP lounge access"}', 1500, false, null, 30, 1, 'monthly', 60),
   ('12000000-0000-4000-8000-000000000014', '11000000-0000-4000-8000-000000000005', '20000000-0000-4000-8000-000000000001', 'xmas-ornament', 'exclusive_reward', 'Limited Edition Ornament', 'Year-End campaign exclusive', '{"fulfilment":"manual"}', 1200, false, null, 30, 1, 'once', 51),
   -- No prize
   ('12000000-0000-4000-8000-000000000015', null, null, 'try-again', 'none', 'Try Again', 'Better luck next time!', '{}', 0, false, null, null, null, 'once', 99),
   -- Quiz champion reward
-  ('12000000-0000-4000-8000-000000000016', '11000000-0000-4000-8000-000000000001', null, 'pp-30', 'play_points', '30 Play Points', '', '{"amount":30}', 0, false, null, null, null, 'once', 12)
+  ('12000000-0000-4000-8000-000000000016', '11000000-0000-4000-8000-000000000002', null, 'pp-30', 'capillary_points', '30 Suntec+ Points', 'Credited to your Suntec+ account', '{"points":30}', 0, false, null, null, null, 'once', 12)
 on conflict (id) do nothing;
 
 -- Inventory (NULL = unlimited). Kopi is deliberately small to demo out-of-stock fallback.
@@ -148,21 +147,21 @@ insert into public.games (id, campaign_id, type, slug, name, description, status
   ('21000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', 'spin_wheel', 'year-end-spin-wheel',
    'Year-End Spin', 'Spin the wheel for dining vouchers, Suntec+ Points and more!', 'draft', 1,
    now() - interval '7 days', now() + interval '60 days',
-   '{"free_per_day":1,"pp_cost":200,"max_per_day":5,"max_per_week":null,"max_per_campaign":null,"cooldown_seconds":10,"session_ttl_seconds":120}',
+   '{"free_per_day":1,"max_per_day":5,"max_per_week":null,"max_per_campaign":null,"cooldown_seconds":10,"session_ttl_seconds":120}',
    '{"spin_duration_ms":4500}',
-   'One free spin per day. Additional spins cost 200 Play Points or can be earned from missions and check-in streaks. Max 5 spins per day.'),
+   'One free spin per day. Earn extra spins from missions and check-in streaks. Max 5 spins per day.'),
   ('21000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', 'scratch_card', 'festive-scratch',
    'Festive Scratch Card', 'Scratch to reveal an instant prize.', 'draft', 2,
    now() - interval '7 days', now() + interval '60 days',
-   '{"free_per_day":1,"pp_cost":100,"max_per_day":3,"cooldown_seconds":5,"session_ttl_seconds":300}',
+   '{"free_per_day":1,"max_per_day":3,"cooldown_seconds":5,"session_ttl_seconds":300}',
    '{"reveal_threshold":0.6}',
-   'One free card per day; extra cards cost 100 Play Points. Max 3 cards per day.'),
+   'One free card per day; earn extra cards from missions. Max 3 cards per day.'),
   ('21000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000001', 'quiz', 'suntec-trivia',
    'Suntec City Trivia', 'How well do you know Suntec City? 5 questions, 20 seconds each.', 'draft', 3,
    now() - interval '7 days', now() + interval '60 days',
    '{"free_per_day":1,"max_per_day":1,"cooldown_seconds":0,"session_ttl_seconds":180}',
    '{"questions_per_session":5,"time_limit_s":20,"pass_percent":60,"speed_bonus":true,"shuffle":true,"reward_tiers":[{"min_correct":5,"reward_id":"12000000-0000-4000-8000-000000000004"},{"min_correct":4,"reward_id":"12000000-0000-4000-8000-000000000003"},{"min_correct":3,"reward_id":"12000000-0000-4000-8000-000000000016"}]}',
-   'One quiz per day. Score 3 or more correct answers to earn Play Points.'),
+   'One quiz per day. Score 3 or more correct answers to earn Suntec+ Points.'),
   ('21000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000002', 'quiz', 'christmas-quiz-daily',
    'Christmas Quiz Countdown', 'A new festive question set every day.', 'draft', 1,
    now() + interval '4 days', now() + interval '30 days',
@@ -178,10 +177,10 @@ where id = '12000000-0000-4000-8000-000000000006';
 -- Spin wheel: 8 segments (sum = 10000 bp = 100%). Colours follow the brand tokens;
 -- text colours meet WCAG AA on their segment colour.
 insert into public.game_outcomes (id, game_id, position, label, display, reward_id, weight_bp, fallback_strategy, fallback_outcome_id) values
-  ('22000000-0000-4000-8000-000000000001', '21000000-0000-4000-8000-000000000001', 0, '20 PP',            '{"color":"#F97316","text_color":"#1F2937","icon":"star"}',  '12000000-0000-4000-8000-000000000002', 2500, 'renormalize', null),
+  ('22000000-0000-4000-8000-000000000001', '21000000-0000-4000-8000-000000000001', 0, '20 Points',        '{"color":"#F97316","text_color":"#1F2937","icon":"star"}',  '12000000-0000-4000-8000-000000000002', 2500, 'renormalize', null),
   ('22000000-0000-4000-8000-000000000002', '21000000-0000-4000-8000-000000000001', 1, '$5 Dining',        '{"color":"#FFFFFF","text_color":"#1F2937","icon":"utensils"}', '12000000-0000-4000-8000-000000000009', 1200, 'renormalize', null),
   ('22000000-0000-4000-8000-000000000003', '21000000-0000-4000-8000-000000000001', 2, 'Bonus Spin',       '{"color":"#C2410C","text_color":"#FFFFFF","icon":"refresh"}',  '12000000-0000-4000-8000-000000000006', 800,  'renormalize', null),
-  ('22000000-0000-4000-8000-000000000004', '21000000-0000-4000-8000-000000000001', 3, '50 PP',            '{"color":"#FED7AA","text_color":"#1F2937","icon":"star"}',  '12000000-0000-4000-8000-000000000003', 1500, 'renormalize', null),
+  ('22000000-0000-4000-8000-000000000004', '21000000-0000-4000-8000-000000000001', 3, '50 Points',        '{"color":"#FED7AA","text_color":"#1F2937","icon":"star"}',  '12000000-0000-4000-8000-000000000003', 1500, 'renormalize', null),
   ('22000000-0000-4000-8000-000000000005', '21000000-0000-4000-8000-000000000001', 4, 'Free Kopi',        '{"color":"#F97316","text_color":"#1F2937","icon":"coffee"}', '12000000-0000-4000-8000-000000000011', 500,  'outcome',     '22000000-0000-4000-8000-000000000001'),
   ('22000000-0000-4000-8000-000000000006', '21000000-0000-4000-8000-000000000001', 5, '100 Suntec+ Pts',  '{"color":"#FFFFFF","text_color":"#1F2937","icon":"coins"}',  '12000000-0000-4000-8000-000000000007', 600,  'renormalize', null),
   ('22000000-0000-4000-8000-000000000007', '21000000-0000-4000-8000-000000000001', 6, '$10 Voucher',      '{"color":"#9A3412","text_color":"#FFFFFF","icon":"bag"}',    '12000000-0000-4000-8000-000000000010', 300,  'outcome',     '22000000-0000-4000-8000-000000000004'),
@@ -190,9 +189,9 @@ on conflict (id) do nothing;
 
 -- Scratch card: 4 outcomes (sum = 10000)
 insert into public.game_outcomes (id, game_id, position, label, display, reward_id, weight_bp, fallback_strategy) values
-  ('22000000-0000-4000-8000-000000000011', '21000000-0000-4000-8000-000000000002', 0, '50 Play Points',     '{"icon":"star"}',     '12000000-0000-4000-8000-000000000003', 3000, 'renormalize'),
+  ('22000000-0000-4000-8000-000000000011', '21000000-0000-4000-8000-000000000002', 0, '50 Suntec+ Points',  '{"icon":"star"}',     '12000000-0000-4000-8000-000000000003', 3000, 'renormalize'),
   ('22000000-0000-4000-8000-000000000012', '21000000-0000-4000-8000-000000000002', 1, '$5 Dining Voucher',  '{"icon":"utensils"}', '12000000-0000-4000-8000-000000000009', 1000, 'renormalize'),
-  ('22000000-0000-4000-8000-000000000013', '21000000-0000-4000-8000-000000000002', 2, '20 Play Points',     '{"icon":"star"}',     '12000000-0000-4000-8000-000000000002', 3000, 'renormalize'),
+  ('22000000-0000-4000-8000-000000000013', '21000000-0000-4000-8000-000000000002', 2, '20 Suntec+ Points',  '{"icon":"star"}',     '12000000-0000-4000-8000-000000000002', 3000, 'renormalize'),
   ('22000000-0000-4000-8000-000000000014', '21000000-0000-4000-8000-000000000002', 3, 'Better luck next time', '{"icon":"rotate"}', null,                                  3000, 'none')
 on conflict (id) do nothing;
 
@@ -211,14 +210,14 @@ insert into public.quiz_questions (id, game_id, category, text, explanation, poi
   ('23000000-0000-4000-8000-000000000005', '21000000-0000-4000-8000-000000000003', 'campaign',
    'How many FREE spins do you get each day in the Year-End Spin?', 'Every member gets one free spin per day.', 100, 5),
   ('23000000-0000-4000-8000-000000000006', '21000000-0000-4000-8000-000000000003', 'campaign',
-   'What do you unlock with a 7-day check-in streak?', 'Day 7 of a streak gives 100 Play Points plus a Bonus Spin.', 100, 6),
+   'What do you unlock with a 7-day check-in streak?', 'Day 7 of a streak gives 100 Suntec+ Points plus a Bonus Spin.', 100, 6),
   -- Christmas quiz (scheduled campaign)
   ('23000000-0000-4000-8000-000000000011', '21000000-0000-4000-8000-000000000004', 'general',
    'In which month is Christmas Day celebrated?', '', 100, 1),
   ('23000000-0000-4000-8000-000000000012', '21000000-0000-4000-8000-000000000004', 'general',
    'Which plant is traditionally decorated at Christmas?', '', 100, 2),
   ('23000000-0000-4000-8000-000000000013', '21000000-0000-4000-8000-000000000004', 'campaign',
-   'What are Play Points used for?', 'Play Points can be redeemed in the Rewards catalogue.', 100, 3)
+   'Where do the points you win in Play & Win go?', 'Points you win are added to your Suntec+ account.', 100, 3)
 on conflict (id) do nothing;
 
 insert into public.quiz_options (question_id, position, text, is_correct) values
@@ -242,8 +241,8 @@ insert into public.quiz_options (question_id, position, text, is_correct) values
   ('23000000-0000-4000-8000-000000000005', 1, 'Two', false),
   ('23000000-0000-4000-8000-000000000005', 2, 'Three', false),
   ('23000000-0000-4000-8000-000000000005', 3, 'Unlimited', false),
-  ('23000000-0000-4000-8000-000000000006', 0, '10 Play Points', false),
-  ('23000000-0000-4000-8000-000000000006', 1, '100 Play Points and a Bonus Spin', true),
+  ('23000000-0000-4000-8000-000000000006', 0, '10 Suntec+ Points', false),
+  ('23000000-0000-4000-8000-000000000006', 1, '100 Suntec+ Points and a Bonus Spin', true),
   ('23000000-0000-4000-8000-000000000006', 2, 'A free tote bag', false),
   ('23000000-0000-4000-8000-000000000006', 3, 'Nothing extra', false),
   ('23000000-0000-4000-8000-000000000011', 0, 'November', false),
@@ -252,9 +251,9 @@ insert into public.quiz_options (question_id, position, text, is_correct) values
   ('23000000-0000-4000-8000-000000000012', 0, 'Fir tree', true),
   ('23000000-0000-4000-8000-000000000012', 1, 'Cactus', false),
   ('23000000-0000-4000-8000-000000000012', 2, 'Bamboo', false),
-  ('23000000-0000-4000-8000-000000000013', 0, 'Redeeming rewards in the catalogue', true),
-  ('23000000-0000-4000-8000-000000000013', 1, 'Paying for parking', false),
-  ('23000000-0000-4000-8000-000000000013', 2, 'Nothing', false)
+  ('23000000-0000-4000-8000-000000000013', 0, 'Your Suntec+ account', true),
+  ('23000000-0000-4000-8000-000000000013', 1, 'A separate game wallet', false),
+  ('23000000-0000-4000-8000-000000000013', 2, 'Nowhere, they are just for fun', false)
 on conflict (question_id, position) do nothing;
 
 -- Activate the Year-End games (weights validated by trigger); Christmas quiz is scheduled.
