@@ -1,0 +1,55 @@
+### Server-to-server calls made by the Suntec+ backend (never from the app).
+### Create the key in Admin → API clients. Use the VS Code "REST Client" extension or copy into curl.
+@host = http://localhost:3000
+@key = sk_live_replace_me
+
+### 1) Open Play & Win for a signed-in member → returns a single-use URL (60 s) for the WebView
+POST {{host}}/api/v1/integrations/sessions
+X-API-Key: {{key}}
+Content-Type: application/json
+
+{
+  "member_id": "SUN-00010001",
+  "entry": "home",
+  "profile": { "first_name": "Ah Kow", "last_name": "Tan", "tier": "gold", "email": "tan.demo@example.com", "card_no": "6012000010001" }
+}
+
+### 2) Send a purchase at a participating merchant (idempotent on external_id)
+POST {{host}}/api/v1/integrations/events
+X-API-Key: {{key}}
+Content-Type: application/json
+
+{
+  "type": "transaction",
+  "external_id": "POS-2026-000123",
+  "member_id": "SUN-00010001",
+  "occurred_at": "2026-11-27T12:30:00+08:00",
+  "payload": { "amount_cents": 6400, "merchant_code": "M-0101" }
+}
+
+### 3) Batch: mall visit + voucher redeemed
+POST {{host}}/api/v1/integrations/events
+X-API-Key: {{key}}
+Content-Type: application/json
+
+{
+  "events": [
+    { "type": "mall_visit", "external_id": "WIFI-88812", "member_id": "SUN-00010002" },
+    { "type": "voucher_redeemed", "external_id": "VMS-RED-551", "member_id": "SUN-00010001", "payload": { "voucher_code": "DIN5-1A2B3C4D" } }
+  ]
+}
+
+### 4) Grant 2 bonus spins (promotion), idempotent on external_id
+POST {{host}}/api/v1/integrations/members/SUN-00010001/attempts
+X-API-Key: {{key}}
+Content-Type: application/json
+
+{ "game_id": "21000000-0000-4000-8000-000000000001", "count": 2, "reason": "Spend $100 promotion", "external_id": "PROMO-777" }
+
+### 5) Summary for the app home tile
+GET {{host}}/api/v1/integrations/members/SUN-00010001/summary
+X-API-Key: {{key}}
+
+### 6) Scheduler (every 1–5 min): maintenance + Capillary/VMS/push delivery
+POST {{host}}/api/v1/jobs/tick
+Authorization: Bearer replace-with-CRON_SECRET
