@@ -40,3 +40,7 @@
 }
 .sp-confetti { animation-name: sp-fall; animation-timing-function: ease-in; animation-fill-mode: forwards; }
 .sp-pop { animation: sp-pop 220ms var(--ease-out) both; }
+/* winning wheel segment glows after the wheel stops */
+@keyframes sp-win { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.sp-win { animation: sp-win 900ms ease-in-out 3; }
+@media (prefers-reduced-motion: reduce) { .sp-win { animation: none; } }

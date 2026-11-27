@@ -52,13 +52,23 @@ const pairs = [
   ['color-on-accent', 'brand-200', AA, 'Wheel label on light orange segment'],
   ['color-text', 'brand-100', AA, 'Wheel label on pale orange segment'],
   ['color-primary-fg', 'brand-700', AA, 'White wheel label on deep orange segment'],
+  // Spin wheel palette (components/play/Wheel.tsx WHEEL_PALETTE): label on segment
+  ['#1F2937', '#F97316', AA, 'Wheel: dark label on Suntec orange'],
+  ['#C2410C', '#FFFFFF', AA, 'Wheel: orange label on white'],
+  ['#FFFFFF', '#0369A1', AA, 'Wheel: white label on Suntec blue'],
+  ['#1F2937', '#FDE68A', AA, 'Wheel: dark label on gold'],
+  ['#FFFFFF', '#15803D', AA, 'Wheel: white label on Suntec green'],
+  ['#9A3412', '#FFEDD5', AA, 'Wheel: brown label on peach'],
+  ['#FFFFFF', '#DC2626', AA, 'Wheel: white label on Suntec red'],
+  ['#0369A1', '#E0F2FE', AA, 'Wheel: blue label on sky'],
+  ['#021F47', '#FFFFFF', AA, 'Wheel hub: navy SPIN on white'],
 ];
 
 let failed = 0;
 console.log('WCAG contrast check (tokens.css)\n');
 for (const [fg, bg, min, usage] of pairs) {
-  const a = vars[fg];
-  const b = vars[bg];
+  const a = fg.startsWith("#") ? fg : vars[fg];
+  const b = bg.startsWith("#") ? bg : vars[bg];
   if (!a || !b) {
     console.log(`  MISSING  ${fg} / ${bg}`);
     failed++;

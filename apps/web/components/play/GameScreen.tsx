@@ -85,35 +85,45 @@ function SpinGame({ game, onPlayed }: { game: GameDetail; onPlayed: () => void }
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<Session | null>(null);
   const [announce, setAnnounce] = useState('');
+  const [landed, setLanded] = useState<number | null>(null);
   const spins = useRef(0);
   const segs = game.outcomes.map((o) => ({ label: o.label, color: o.display.color, text_color: o.display.text_color }));
   const duration = prefersReducedMotion() ? 0 : (game.config.spin_duration_ms ?? 4500);
 
   async function spin() {
+    setLanded(null);
     const s = await start();
     if (!s) return;
     haptic('light');
-    const idx = game.outcomes.findIndex((o) => o.position === s.outcome.position);
+    // The server already decided the outcome; the wheel stops with that segment under the pointer.
+    const idx = Math.max(game.outcomes.findIndex((o) => o.position === s.outcome.position), 0);
     spins.current += 1;
-    const target = rotationForSegment(Math.max(idx, 0), segs.length, 6 * spins.current, Math.random() - 0.5);
+    const target = rotationForSegment(idx, segs.length, 6 * spins.current, Math.random() - 0.5);
     setSpinning(true);
     setAnnounce('Spinning…');
     setRotation(target);
     window.setTimeout(() => {
+      // Wheel stopped: light up the segment under the pointer, then show the result.
       setSpinning(false);
-      setResult(s);
+      setLanded(idx);
       const won = Boolean(s.outcome.won);
-      setAnnounce(won ? `You won ${s.outcome.reward?.name}!` : 'No prize this time.');
+      setAnnounce(won ? `The wheel stopped on ${segs[idx]?.label}. You won ${s.outcome.reward?.name}!` : `The wheel stopped on ${segs[idx]?.label}. No prize this time.`);
       if (won) {
         haptic('success');
         emitBridge('reward_won', { reward: s.outcome.reward?.name, type: s.outcome.reward?.type, ref: s.ref });
       }
-    }, duration + 150);
+      window.setTimeout(() => setResult(s), duration ? 1100 : 0);
+    }, duration + 100);
   }
 
   return (
     <Card className="flex flex-col items-center gap-4 p-5">
-      <Wheel segments={segs} rotation={rotation} durationMs={duration} size={340} />
+      <Wheel segments={segs} rotation={rotation} durationMs={duration} size={340} highlight={spinning ? null : landed} />
+      {landed !== null && !spinning && (
+        <p className="text-center text-sm font-semibold text-brand-navy" aria-hidden="true">
+          ▲ {segs[landed]?.label}
+        </p>
+      )}
       <p className="sr-only" aria-live="assertive">
         {announce}
       </p>
