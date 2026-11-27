@@ -1,0 +1,64 @@
+/*
+ * Tailwind v4 theme mapping. Import AFTER `@import "tailwindcss";` in the app stylesheet:
+ *   @import "tailwindcss";
+ *   @import "@suntec/ui/tokens.css";
+ *   @import "@suntec/ui/theme.css";
+ * Utilities then become e.g. bg-primary, text-text-muted, border-border, bg-brand-50.
+ */
+@theme inline {
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-active: var(--color-primary-active);
+  --color-primary-fg: var(--color-primary-fg);
+  --color-primary-subtle: var(--color-primary-subtle);
+  --color-primary-subtle-hover: var(--color-primary-subtle-hover);
+  --color-primary-subtle-fg: var(--color-primary-subtle-fg);
+  --color-accent: var(--color-accent);
+  --color-on-accent: var(--color-on-accent);
+
+  --color-disabled-bg: var(--color-disabled-bg);
+  --color-disabled-fg: var(--color-disabled-fg);
+  --color-disabled-border: var(--color-disabled-border);
+
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-muted: var(--color-surface-muted);
+  --color-surface-sunken: var(--color-surface-sunken);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-input-border: var(--color-input-border);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-subtle: var(--color-text-subtle);
+
+  --color-success: var(--color-success);
+  --color-success-subtle: var(--color-success-subtle);
+  --color-warning: var(--color-warning);
+  --color-warning-subtle: var(--color-warning-subtle);
+  --color-danger: var(--color-danger);
+  --color-danger-subtle: var(--color-danger-subtle);
+  --color-info: var(--color-info);
+  --color-info-subtle: var(--color-info-subtle);
+  --color-focus: var(--color-focus);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --ease-out: var(--ease-out);
+  --font-sans: var(--font-sans);
+}
