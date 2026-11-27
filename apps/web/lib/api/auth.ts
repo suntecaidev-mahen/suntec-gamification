@@ -5,19 +5,27 @@ import { supabaseAdmin } from '../supabase/admin';
 import { createSupabaseServerClient } from '../supabase/server';
 import { enforceRateLimit, fail, sha256 } from './core';
 import { linkMemberForUser, type MemberRow } from './loyalty';
+import { findGuest } from './guest';
 
 export interface MemberContext {
-  user: User;
+  user: User | null;
   member: MemberRow;
+  /** True for a guest playing from the public link (winnings are held until claimed). */
+  guest: boolean;
 }
 
 /**
  * Resolves the calling customer from either
  *   - `Authorization: Bearer <supabase access token>` (native apps / WebView fallback), or
- *   - the Supabase session cookie (portal and /embed).
+ *   - the Supabase session cookie (Play & Win web and in-app), or
+ *   - with `{ guests: true }`: the guest cookie of someone playing from the public link.
  * Then maps the auth user to the gamification member (linking by email on first use).
  */
-export async function requireMember(req: NextRequest, rate: { key: string; limit: number } = { key: 'api', limit: 120 }): Promise<MemberContext> {
+export async function requireMember(
+  req: NextRequest,
+  rate: { key: string; limit: number } = { key: 'api', limit: 120 },
+  opts: { guests?: boolean } = {},
+): Promise<MemberContext> {
   let user: User | null = null;
   const auth = req.headers.get('authorization');
   if (auth?.toLowerCase().startsWith('bearer ')) {
@@ -28,14 +36,20 @@ export async function requireMember(req: NextRequest, rate: { key: string; limit
     const { data } = await supabase.auth.getUser();
     user = data.user ?? null;
   }
-  if (!user) fail('UNAUTHENTICATED', 'Please sign in');
+  if (!user) {
+    const guest = opts.guests ? await findGuest(req.cookies) : null;
+    if (!guest) fail('UNAUTHENTICATED', opts.guests ? 'Your session has ended. Please reload the page.' : 'Please sign in as a Suntec+ member');
+    if (guest.status === 'blocked') fail('MEMBER_BLOCKED', 'Play & Win is not available on this device.');
+    await enforceRateLimit(`m:${guest.id}:${rate.key}`, rate.limit, 60);
+    return { user: null, member: guest, guest: true };
+  }
 
   const member = await linkMemberForUser(user);
   if (!member) fail('MEMBER_NOT_LINKED', 'This login is not linked to a Suntec+ membership');
   if (member.status === 'blocked') fail('MEMBER_BLOCKED', 'Your Play & Win access is suspended. Please contact Suntec+ Customer Service.');
 
   await enforceRateLimit(`m:${member.id}:${rate.key}`, rate.limit, 60);
-  return { user, member };
+  return { user, member, guest: false };
 }
 
 export interface ClientContext {

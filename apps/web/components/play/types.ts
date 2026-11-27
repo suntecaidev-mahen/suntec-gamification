@@ -24,7 +24,14 @@ export type RewardView = {
 };
 
 export type Summary = {
-  member: { first_name: string | null; last_name: string | null; tier: string; suntec_member_id: string; email: string | null };
+  member: { first_name: string | null; last_name: string | null; tier: string; suntec_member_id: string | null; email: string | null };
+  is_guest: boolean;
+  /** Guests only: code to move held winnings to a Suntec+ account. */
+  claim: { code: string; expires_at: string } | null;
+  /** Guest winnings waiting to be claimed. */
+  held: { rewards: number; points: number };
+  /** Suntec+ Points this member has won with Play & Win. */
+  points_won: number;
   pp_name: string;
   pp_balance: number;
   pp_lifetime_earned: number;

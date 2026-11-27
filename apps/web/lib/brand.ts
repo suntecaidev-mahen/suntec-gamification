@@ -14,4 +14,18 @@ export const SUNTEC = {
     appStore: 'https://apps.apple.com/us/app/suntec/id6477148620',
     googlePlay: 'https://play.google.com/store/apps/details?id=com.apm.suntec&hl=en-SG',
   },
+  /** Android package of the Suntec+ app (from its Play Store listing). */
+  androidPackage: 'com.apm.suntec',
 } as const;
+
+/**
+ * Deep link into the Suntec+ app's sign-up screen, e.g. "suntecplus://signup?claim={code}".
+ * Provided by the Suntec+ app team (NEXT_PUBLIC_SUNTEC_APP_SIGNUP_LINK). Until it is set,
+ * "Join Suntec+" goes straight to the App Store / Google Play.
+ */
+export function appSignupLink(claimCode: string | null): string | null {
+  const template = process.env.NEXT_PUBLIC_SUNTEC_APP_SIGNUP_LINK;
+  if (!template) return null;
+  const code = encodeURIComponent(claimCode ?? '');
+  return template.includes('{code}') ? template.replace('{code}', code) : template;
+}

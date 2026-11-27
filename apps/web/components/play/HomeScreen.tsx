@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { Alert, Badge, Button, Card, ProgressBar } from '@suntec/ui';
 import { formatDate } from '@suntec/core';
 import { api, haptic, emitBridge, usePlay, useApi, type ApiError } from './client';
-import { ErrorBlock, LoadingBlock, ResultDialog } from './bits';
+import { ErrorBlock, JoinCta, LoadingBlock, ResultDialog } from './bits';
+import { SUNTEC } from '@/lib/brand';
 import type { Availability, CheckinStatus, GameCard, Home } from './types';
 
 const GAME_ICON: Record<string, string> = { spin_wheel: '🎡', scratch_card: '🎟️', quiz: '🧠' };
@@ -16,39 +17,69 @@ export function availabilityLabel(a: Availability | null | undefined): string {
   if (a.reason === 'cooldown') return `Ready in ${a.cooldown_s}s`;
   if (a.free_left > 0) return `${a.free_left} free play${a.free_left > 1 ? 's' : ''} today`;
   if (a.attempts > 0) return `${a.attempts} bonus play${a.attempts > 1 ? 's' : ''}`;
-  if (a.pp_cost) return a.pp_balance >= a.pp_cost ? `${a.pp_cost} PP per play` : `Needs ${a.pp_cost} PP`;
-  return 'No plays left';
+  return 'No plays left today';
 }
 
-export function HomeScreen() {
-  const { base, refreshBalance } = usePlay();
+export function HomeScreen({ claimed }: { claimed?: string }) {
+  const { base, refreshBalance, viewer } = usePlay();
   const { data, error, loading, reload } = useApi<Home>('/home');
   if (loading && !data) return <LoadingBlock lines={4} />;
   if (error && !data) return <ErrorBlock error={error} retry={reload} />;
   if (!data) return null;
   const s = data.summary;
   const inProgress = data.missions.filter((m) => !m.completed).slice(0, 3);
+  const claimedPoints = Number(claimed ?? 0);
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby="hello" className="rounded-xl bg-gradient-to-br from-brand-50 to-brand-100 p-5">
-        <h1 id="hello" className="text-2xl font-bold">
-          Hi {s.member.first_name ?? 'there'} 👋
-        </h1>
-        <p className="mt-1 text-sm text-text-muted">
-          You have <strong className="text-text">{s.pp_balance.toLocaleString()} {s.pp_name}</strong>
-          {s.active_rewards > 0 && (
-            <>
-              {' '}
-              and{' '}
-              <Link href={`${base}/rewards?tab=mine`} className="font-semibold text-primary underline-offset-2 hover:underline">
-                {s.active_rewards} reward{s.active_rewards > 1 ? 's' : ''}
-              </Link>
-            </>
+      {claimedPoints > 0 && !s.is_guest && (
+        <Alert tone="success" title="Your guest winnings are now yours">
+          {claimedPoints.toLocaleString()} Suntec+ Points (and any prizes) you won as a guest have been added to your Suntec+ account.
+        </Alert>
+      )}
+
+      {s.is_guest ? (
+        <section aria-labelledby="hello" className="rounded-xl bg-gradient-to-br from-brand-50 to-brand-100 p-5">
+          <h1 id="hello" className="text-2xl font-bold">
+            Play &amp; win Suntec+ Points 🎉
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">Spin, scratch and quiz — no sign-up needed to play. Suntec+ members get their points straight into their account.</p>
+          {s.held.rewards > 0 ? (
+            <div className="mt-4 rounded-lg border border-brand-200 bg-surface p-4">
+              <p className="text-sm">You’ve won</p>
+              <p className="text-2xl font-bold text-primary">
+                {s.held.points > 0 ? `${Number(s.held.points).toLocaleString()} Suntec+ Points` : `${s.held.rewards} prize${s.held.rewards > 1 ? 's' : ''}`}
+              </p>
+              {s.held.points > 0 && s.held.rewards > 1 && <p className="text-xs text-text-muted">plus other prizes</p>}
+              <p className="mt-1 mb-3 text-xs text-text-muted">Saved until {s.claim ? formatDate(s.claim.expires_at) : '30 days from now'}. Join Suntec+ to collect.</p>
+              <JoinCta claimCode={viewer.claimCode ?? s.claim?.code ?? null} />
+            </div>
+          ) : (
+            <p className="mt-3 text-sm">
+              Already a Suntec+ member?{' '}
+              <Link href="/play/signin" className="font-semibold text-primary hover:underline">
+                Sign in
+              </Link>{' '}
+              so your wins go straight to your account.
+            </p>
           )}
-          .
-        </p>
-      </section>
+        </section>
+      ) : (
+        <section aria-labelledby="hello" className="rounded-xl bg-gradient-to-br from-brand-50 to-brand-100 p-5">
+          <h1 id="hello" className="text-2xl font-bold">
+            Hi {s.member.first_name ?? 'there'} 👋
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">
+            {Number(s.points_won) > 0 ? (
+              <>
+                You’ve won <strong className="text-text">{Number(s.points_won).toLocaleString()} Suntec+ Points</strong> with Play &amp; Win. Points go straight to your Suntec+ account.
+              </>
+            ) : (
+              'Play games, check in daily and complete missions — every point you win goes straight to your Suntec+ account.'
+            )}
+          </p>
+        </section>
+      )}
 
       {data.checkin && (
         <CheckinCard
@@ -126,6 +157,27 @@ export function HomeScreen() {
           </ul>
         </section>
       )}
+
+      <footer className="border-t border-border pt-4 text-xs text-text-muted">
+        <p className="font-medium text-text">{SUNTEC.mallName}</p>
+        <p>
+          {SUNTEC.address} · {SUNTEC.openingHours}
+        </p>
+        <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+          <a href={SUNTEC.links.gettingHere} target="_blank" rel="noopener noreferrer" className="hover:underline">
+            Getting here
+          </a>
+          <a href={SUNTEC.links.faq} target="_blank" rel="noopener noreferrer" className="hover:underline">
+            FAQ
+          </a>
+          <a href={SUNTEC.links.terms} target="_blank" rel="noopener noreferrer" className="hover:underline">
+            Terms
+          </a>
+          <a href={SUNTEC.links.privacy} target="_blank" rel="noopener noreferrer" className="hover:underline">
+            Privacy
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }

@@ -5103,6 +5103,43 @@ update public.quiz_options set text = 'A separate game wallet'
  where question_id = '23000000-0000-4000-8000-000000000013' and text = 'Paying for parking';
 
 -- -----------------------------------------------------------------------------
+-- Admin: Suntec+ Points awarded (dashboard today / one customer) and guest stats
+-- -----------------------------------------------------------------------------
+create or replace function public.admin_points_summary(p_member uuid default null)
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare
+  v_start timestamptz := public.business_day()::timestamp at time zone public.app_tz();
+begin
+  if not (public.has_permission('reports.read') or public.has_permission('campaigns.read') or public.has_permission('customers.read')) then
+    perform public.app_error('FORBIDDEN', 'You do not have permission to view this');
+  end if;
+  return jsonb_build_object(
+    'points_awarded_today', (select coalesce(sum((t.reward_snapshot->'value'->>'points')::bigint * t.quantity), 0)
+                             from public.reward_transactions t
+                             where t.reward_type = 'capillary_points' and t.created_at >= v_start
+                               and t.status::text in ('pending', 'retrying', 'issued')),
+    'points_held', (select coalesce(sum((t.reward_snapshot->'value'->>'points')::bigint * t.quantity), 0)
+                    from public.reward_transactions t where t.reward_type = 'capillary_points' and t.status::text = 'held'),
+    'guests_today', (select count(*) from public.members m where m.is_guest and m.created_at >= v_start),
+    'guests_claimed_today', (select count(*) from public.members m where m.is_guest and m.claimed_at >= v_start),
+    'member_points_won', case when p_member is null then null else
+      (select coalesce(sum((t.reward_snapshot->'value'->>'points')::bigint * t.quantity), 0)
+       from public.reward_transactions t
+       where t.member_id = p_member and t.reward_type = 'capillary_points' and t.status::text in ('pending', 'retrying', 'issued', 'redeemed')) end);
+end;
+$$;
+
+do $$
+begin
+  revoke execute on function public.admin_points_summary(uuid) from public;
+  begin
+    revoke execute on function public.admin_points_summary(uuid) from anon;
+    grant execute on function public.admin_points_summary(uuid) to authenticated, service_role;
+  exception when undefined_object then null;
+  end;
+end $$;
+
+-- -----------------------------------------------------------------------------
 -- Privileges: engine functions are server-only (service role)
 -- -----------------------------------------------------------------------------
 do $$

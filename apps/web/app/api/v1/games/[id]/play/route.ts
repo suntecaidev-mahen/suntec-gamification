@@ -12,7 +12,7 @@ type Session = { id: string; game_id: string; outcome?: { reward?: { id?: string
  * animates to the returned result.
  */
 export const POST = route<{ id: string }>(async (req, { id }) => {
-  const { member } = await requireMember(req, { key: 'play', limit: 30 });
+  const { member } = await requireMember(req, { key: 'play', limit: 30 }, { guests: true });
   const gameId = uuid.parse(id);
   const key = req.headers.get('idempotency-key')?.trim();
   if (!key || key.length < 8 || key.length > 200) fail('INVALID', 'Idempotency-Key header (8-200 chars) is required');

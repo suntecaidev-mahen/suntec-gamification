@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Alert, Button, Skeleton } from '@suntec/ui';
-import type { ApiError } from './client';
+import { Alert, Button, Skeleton, cn } from '@suntec/ui';
+import { formatClaimCode, usePlay, type ApiError } from './client';
 import type { RewardView } from './types';
 
 export function LoadingBlock({ lines = 3 }: { lines?: number }) {
@@ -70,7 +70,7 @@ export function Dialog({ open, title, onClose, children }: { open: boolean; titl
         aria-modal="true"
         aria-labelledby="dlg-title"
         tabIndex={-1}
-        className="sp-pop w-full max-w-sm rounded-xl bg-surface p-6 text-center shadow-lg outline-none"
+        className="sp-pop max-h-[90dvh] w-full max-w-sm overflow-y-auto rounded-xl bg-surface p-6 text-center shadow-lg outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 id="dlg-title" className="text-xl font-bold">
@@ -82,28 +82,65 @@ export function Dialog({ open, title, onClose, children }: { open: boolean; titl
   );
 }
 
-export function rewardLine(r: RewardView | null | undefined): string {
-  if (!r) return '';
-  if (r.type === 'play_points') return `${r.amount ?? ''} Play Points added to your balance.`;
-  if (r.type === 'bonus_attempt') return 'A bonus play has been added — use it any time.';
-  if (r.type === 'capillary_points') return `${r.amount ?? ''} Suntec+ Points are on their way to your Suntec+ account.`;
-  if (r.voucher_code) return `Your code: ${r.voucher_code}. Find it any time in My Rewards.`;
-  if (r.claim_token) return 'Show the claim code in My Rewards at the Concierge to collect.';
-  if (r.status === 'pending') return 'Your voucher is being issued and will appear in My Rewards shortly.';
-  return 'Find it in My Rewards.';
+/** Link styled as a button (navigation must stay a link for accessibility). */
+export function LinkButton({ href, children, variant = 'primary', className }: { href: string; children: ReactNode; variant?: 'primary' | 'secondary'; className?: string }) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'inline-flex h-11 items-center justify-center rounded-md px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+        variant === 'primary' ? 'bg-primary text-primary-fg shadow-sm hover:bg-primary-hover' : 'border border-brand-200 bg-primary-subtle text-primary-subtle-fg hover:bg-primary-subtle-hover',
+        className,
+      )}
+    >
+      {children}
+    </Link>
+  );
 }
 
-export function ResultDialog({ open, won, title, reward, onClose, base, extra }: { open: boolean; won: boolean; title: string; reward?: RewardView | null; onClose: () => void; base: string; extra?: ReactNode }) {
+/** Guest call to action: join Suntec+ (app / store) or sign in as an existing member. */
+export function JoinCta({ claimCode, note = true }: { claimCode: string | null; note?: boolean }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <LinkButton href={`/play/join${claimCode ? `?claim=${claimCode}` : ''}`}>Join Suntec+ to collect</LinkButton>
+      <LinkButton href="/play/signin" variant="secondary">
+        I’m a Suntec+ member — sign in
+      </LinkButton>
+      {note && claimCode && (
+        <p className="text-xs text-text-muted">
+          Your claim code <strong className="font-mono text-text">{formatClaimCode(claimCode)}</strong> keeps your winnings safe for 30 days.
+        </p>
+      )}
+    </div>
+  );
+}
+
+export function rewardLine(r: RewardView | null | undefined): string {
+  if (!r) return '';
+  if (r.status === 'held') return 'Saved for you. Join Suntec+ (it’s free) to add it to your account.';
+  if (r.type === 'bonus_attempt') return 'A bonus play has been added — use it any time.';
+  if (r.type === 'capillary_points') return `${r.amount ?? ''} Suntec+ Points are being added to your Suntec+ account.`;
+  if (r.voucher_code) return `Your code: ${r.voucher_code}. Find it any time in My rewards.`;
+  if (r.claim_token) return 'Show the claim code in My rewards at the Concierge to collect.';
+  if (r.status === 'pending') return 'Your voucher is being issued and will appear in My rewards shortly.';
+  return 'Find it in My rewards.';
+}
+
+/** Win / no-win popup after a play or check-in. Guests are invited to join Suntec+ to collect. */
+export function ResultDialog({ open, won, title, reward, onClose, extra }: { open: boolean; won: boolean; title: string; reward?: RewardView | null; onClose: () => void; base?: string; extra?: ReactNode }) {
+  const { viewer } = usePlay();
+  const held = won && reward?.status === 'held';
+  const points = reward?.type === 'capillary_points' ? reward.amount : null;
   return (
     <>
       {open && won && <Confetti />}
-      <Dialog open={open} title={title} onClose={onClose}>
+      <Dialog open={open} title={won ? (held ? 'You won!' : title) : title} onClose={onClose}>
         {won && reward ? (
           <>
             <p className="text-3xl" aria-hidden="true">
               🎉
             </p>
-            <p className="mt-2 text-lg font-semibold text-primary">{reward.name}</p>
+            <p className="mt-2 text-2xl font-bold text-primary">{points ? `${points.toLocaleString()} Suntec+ Points` : reward.name}</p>
             <p className="mt-2 text-sm text-text-muted">{rewardLine(reward)}</p>
           </>
         ) : (
@@ -111,24 +148,25 @@ export function ResultDialog({ open, won, title, reward, onClose, base, extra }:
         )}
         {extra}
         <div className="mt-5 flex flex-col gap-2">
-          <Button onClick={onClose}>Continue</Button>
-          {won && reward && !['play_points', 'bonus_attempt'].includes(reward.type) && (
-            <Link href={`${base}/rewards?tab=mine`} className="text-sm font-medium text-primary hover:underline">
-              Go to My Rewards
-            </Link>
+          {held ? (
+            <>
+              <JoinCta claimCode={viewer.claimCode} />
+              <button type="button" onClick={onClose} className="mt-1 text-sm font-medium text-text-muted hover:underline">
+                Keep playing
+              </button>
+            </>
+          ) : (
+            <>
+              <Button onClick={onClose}>Continue</Button>
+              {won && reward && reward.type !== 'bonus_attempt' && (
+                <Link href="/play/rewards" className="text-sm font-medium text-primary hover:underline">
+                  Go to My rewards
+                </Link>
+              )}
+            </>
           )}
         </div>
       </Dialog>
     </>
-  );
-}
-
-export function PlayPointsPill({ value, name = 'Play Points' }: { value: number | null | undefined; name?: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-subtle px-3 py-1 text-sm font-semibold text-primary-subtle-fg" aria-label={`${value ?? 0} ${name}`}>
-      <span aria-hidden="true">★</span>
-      {(value ?? 0).toLocaleString()}
-      <span className="sr-only sm:not-sr-only sm:text-xs sm:font-medium">{name}</span>
-    </span>
   );
 }

@@ -6,14 +6,14 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { publicEnv } from '@/lib/env';
 
 const ENTRY_PATHS: Record<string, string> = {
-  home: '/embed',
-  games: '/embed',
-  checkin: '/embed',
-  missions: '/embed/missions',
-  rewards: '/embed/rewards',
-  badges: '/embed/badges',
-  leaderboard: '/embed/leaderboard',
-  inbox: '/embed/inbox',
+  home: '/play',
+  games: '/play',
+  checkin: '/play',
+  missions: '/play/missions',
+  rewards: '/play/rewards',
+  badges: '/play',
+  leaderboard: '/play',
+  inbox: '/play',
 };
 
 /**
@@ -32,7 +32,7 @@ export const POST = route(async (req) => {
   });
   const code = randomBytes(32).toString('base64url');
   const expiresAt = new Date(Date.now() + 60_000);
-  const entry = body.game_id && ['spin', 'scratch', 'quiz'].includes(body.entry) ? `/embed/games/${body.game_id}` : (ENTRY_PATHS[body.entry] ?? '/embed');
+  const entry = body.game_id && ['spin', 'scratch', 'quiz'].includes(body.entry) ? `/play/games/${body.game_id}` : (ENTRY_PATHS[body.entry] ?? '/play');
   const { error } = await supabaseAdmin().from('session_handoffs').insert({
     code_hash: sha256(code),
     member_id: memberId,

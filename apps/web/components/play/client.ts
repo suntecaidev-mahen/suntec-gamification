@@ -136,10 +136,19 @@ export function prefersReducedMotion(): boolean {
 }
 
 /* ----------------------------------------------------------------------------
- * Play context: which shell we are in (/portal or /embed).
+ * Play context. One experience at /play:
+ *   mode "app" — opened from the Suntec+ app (member signed in by the app, native bridge on)
+ *   mode "web" — opened from the public link (guest play, optional member sign-in)
  * ------------------------------------------------------------------------- */
-export type PlayMode = 'portal' | 'embed';
-export const PlayContext = createContext<{ base: string; mode: PlayMode; refreshBalance: () => void }>({ base: '/portal', mode: 'portal', refreshBalance: () => undefined });
+export type PlayMode = 'app' | 'web';
+export type Viewer = { guest: boolean; firstName: string | null; claimCode: string | null };
+export const PLAY_BASE = '/play';
+export const PlayContext = createContext<{ base: string; mode: PlayMode; viewer: Viewer; refreshBalance: () => void }>({
+  base: PLAY_BASE,
+  mode: 'web',
+  viewer: { guest: true, firstName: null, claimCode: null },
+  refreshBalance: () => undefined,
+});
 export const usePlay = () => useContext(PlayContext);
 
 /** Maps template deep links (suntecplus://play/…) to in-module routes. */
@@ -148,14 +157,11 @@ export function deepLinkToPath(link: string | null | undefined, base: string): s
   const m = link.match(/^suntecplus:\/\/play\/?(.*)$/);
   if (!m) return base;
   const [section] = (m[1] ?? '').split('/');
-  switch (section) {
-    case 'missions':
-    case 'rewards':
-    case 'badges':
-    case 'leaderboard':
-    case 'inbox':
-      return `${base}/${section}`;
-    default:
-      return base;
-  }
+  return section === 'missions' || section === 'rewards' ? `${base}/${section}` : base;
+}
+
+/** "7K3MQ9XD" → "7K3M-Q9XD" (easier to read and type). */
+export function formatClaimCode(code: string | null | undefined): string {
+  if (!code) return '';
+  return code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
 }

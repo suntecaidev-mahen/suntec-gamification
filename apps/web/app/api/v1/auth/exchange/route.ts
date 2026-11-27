@@ -3,15 +3,16 @@ import { createServerClient } from '@supabase/ssr';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { publicEnv } from '@/lib/env';
 import { sha256 } from '@/lib/api/core';
+import { APP_COOKIE, GUEST_COOKIE } from '@/lib/api/guest';
 
 /**
  * GET /api/v1/auth/exchange?code=…  — SSO handoff for the in-app WebView.
  * Consumes a single-use code created by POST /integrations/sessions, signs the member in
- * (Supabase session cookie, no password) and redirects into /embed.
+ * (Supabase session cookie, no password) and redirects into Play & Win (/play) in app mode.
  */
 export async function GET(req: NextRequest) {
   const origin = req.nextUrl.origin;
-  const failTo = (reason: string) => NextResponse.redirect(new URL(`/embed/error?reason=${reason}`, origin));
+  const failTo = (reason: string) => NextResponse.redirect(new URL(`/play/error?reason=${reason}`, origin));
   const code = req.nextUrl.searchParams.get('code');
   if (!code || code.length < 20 || code.length > 100) return failTo('invalid');
 
@@ -63,8 +64,12 @@ export async function GET(req: NextRequest) {
     }
     if (!tokenHash) return failTo('signin');
 
-    const target = handoff.entry && handoff.entry.startsWith('/embed') ? handoff.entry : '/embed';
+    const entry = (handoff.entry ?? '').replace(/^\/embed/, '/play');
+    const target = entry.startsWith('/play') ? entry : '/play';
     const response = NextResponse.redirect(new URL(target, origin));
+    // Opened from the Suntec+ app: members only (no guest mode), native bridge events on.
+    response.cookies.set(APP_COOKIE, '1', { httpOnly: true, sameSite: 'lax', secure: req.nextUrl.protocol === 'https:', path: '/' });
+    response.cookies.delete(GUEST_COOKIE);
     const env = publicEnv();
     const supabase = createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
       cookies: {

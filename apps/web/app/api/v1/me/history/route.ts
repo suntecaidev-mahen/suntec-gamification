@@ -2,7 +2,7 @@ import { ok, route, toAppError } from '@/lib/api/core';
 import { requireMember } from '@/lib/api/auth';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
-/** GET /api/v1/me/history — recent plays and Play Points ledger. */
+/** GET /api/v1/me/history — recent plays (Play Points ledger is retired). */
 export const GET = route(async (req) => {
   const { member } = await requireMember(req);
   const db = supabaseAdmin();

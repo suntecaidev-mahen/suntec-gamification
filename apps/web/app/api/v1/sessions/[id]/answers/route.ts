@@ -6,7 +6,7 @@ import { deliverNow } from '@/lib/api/outbox';
 
 /** POST /api/v1/sessions/{id}/answers — submit quiz answers; scored on the server. */
 export const POST = route<{ id: string }>(async (req, { id }) => {
-  const { member } = await requireMember(req, { key: 'play', limit: 30 });
+  const { member } = await requireMember(req, { key: 'play', limit: 30 }, { guests: true });
   const body = await parseJson(req, quizSubmitBodySchema);
   const result = await rpc<{ outcome?: { reward?: { id?: string } | null } }>('quiz_submit', {
     p_member: member.id,

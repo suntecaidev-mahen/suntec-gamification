@@ -19,8 +19,6 @@ const NAV: { title: string; items: { href: string; label: string; perm: Permissi
       { href: '/admin/r/missions', label: 'Missions', perm: ['campaigns.read'] },
       { href: '/admin/r/checkin_programs', label: 'Daily check-in', perm: ['campaigns.read'] },
       { href: '/admin/r/checkin_streak_rules', label: 'Streak ladder', perm: ['campaigns.read'] },
-      { href: '/admin/r/badges', label: 'Badges', perm: ['campaigns.read'] },
-      { href: '/admin/r/leaderboards', label: 'Leaderboards', perm: ['campaigns.read'] },
       { href: '/admin/r/qr_codes', label: 'QR codes', perm: ['campaigns.read'] },
     ],
   },

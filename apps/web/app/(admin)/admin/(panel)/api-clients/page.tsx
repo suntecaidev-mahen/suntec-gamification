@@ -14,6 +14,7 @@ const SCOPES = [
   { value: 'events:write', label: 'events:write — send transactions, visits, voucher redemptions' },
   { value: 'attempts:write', label: 'attempts:write — grant bonus game attempts' },
   { value: 'members:read', label: 'members:read — read Play & Win summaries' },
+  { value: 'claims:write', label: 'claims:write — move a guest’s held winnings to a new member (claim code at sign-up)' },
 ];
 
 export default async function ApiClientsPage() {

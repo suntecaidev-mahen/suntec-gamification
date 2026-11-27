@@ -116,6 +116,15 @@ export const eventsBodySchema = z.union([
   z.object({ events: z.array(eventSchema).min(1).max(100) }),
 ]);
 
+/** Claim code a guest received after playing (e.g. "7K3M-Q9XD"); spaces/dashes are ignored. */
+export const claimBodySchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .transform((v) => v.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+    .pipe(z.string().regex(/^[A-Z0-9]{8}$/, 'Enter the 8-character claim code')),
+});
+
 export const attemptGrantBodySchema = z.object({
   game_id: uuid,
   count: z.number().int().min(1).max(20),

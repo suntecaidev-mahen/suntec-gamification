@@ -12,18 +12,12 @@ export default async function SettingsPage() {
   const { data: s } = await (await createSupabaseServerClient()).from('app_settings').select('*').single();
   return (
     <>
-      <PageHeader title="Platform settings" description="Business timezone for daily resets, Play Points behaviour and anti-fraud thresholds." />
+      <PageHeader title="Platform settings" description="Business timezone for daily resets, notifications and anti-fraud thresholds. Customers win Suntec+ Points (credited in Capillary)." />
       <Card className="max-w-2xl">
         <ActionForm action={saveSettings} submitLabel="Save settings">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="timezone" label="Business timezone" help="Daily limits, streaks and leaderboards reset at midnight here.">
               <Input id="timezone" name="timezone" defaultValue={s?.timezone ?? 'Asia/Singapore'} />
-            </Field>
-            <Field id="pp_name" label="Name of the gamification currency">
-              <Input id="pp_name" name="pp_name" defaultValue={s?.pp_name ?? 'Play Points'} />
-            </Field>
-            <Field id="pp_expiry_days" label="Play Points expire after (days)" help="Leave empty for no expiry.">
-              <Input id="pp_expiry_days" name="pp_expiry_days" type="number" min={1} defaultValue={s?.pp_expiry_days ?? ''} />
             </Field>
             <Field id="push_daily_cap" label="Max push notifications per member per day">
               <Input id="push_daily_cap" name="push_daily_cap" type="number" min={0} max={50} defaultValue={s?.push_daily_cap ?? 3} />

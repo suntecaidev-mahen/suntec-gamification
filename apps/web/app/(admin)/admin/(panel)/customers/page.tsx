@@ -40,7 +40,6 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
             { key: 'email', label: 'Email' },
             { key: 'card_no', label: 'Card' },
             { key: 'tier', label: 'Tier' },
-            { key: 'pp_balance', label: 'Play Points' },
             { key: 'status', label: 'Status', format: 'status' },
             { key: 'last_active_at', label: 'Last active', format: 'datetime' },
           ]}

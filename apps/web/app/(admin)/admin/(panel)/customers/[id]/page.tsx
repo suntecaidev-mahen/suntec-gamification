@@ -4,7 +4,7 @@ import { Alert, Badge, Card, Field, Input, Select } from '@suntec/ui';
 import { formatDate, formatDateTime } from '@suntec/core';
 import { requireStaff } from '@/lib/admin/session';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { adjustPoints, cancelReward, grantAttempts, grantReward, retryReward, setMemberStatus } from '@/lib/admin/actions';
+import { cancelReward, grantAttempts, grantReward, retryReward, setMemberStatus } from '@/lib/admin/actions';
 import { ActionForm } from '@/components/admin/ActionForm';
 import { DataTable, PageHeader, Section, StatCard, StatusBadge } from '@/components/admin/ui';
 
@@ -35,6 +35,9 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   if (error || !data) return <Alert tone="danger">{error?.message ?? 'Not found'}</Alert>;
   const d = data as Detail;
   const p = d.profile ?? {};
+  const { data: pts } = await supabase.rpc('admin_points_summary', { p_member: id });
+  const pointsWon = Number((pts as { member_points_won?: number } | null)?.member_points_won ?? 0);
+  const isGuest = d.member.suntec_member_id.startsWith('GUEST-');
   const [{ data: games }, { data: rewards }] = d.can_act
     ? await Promise.all([
         supabase.from('games').select('id, name').in('status', ['active', 'scheduled']).order('name'),
@@ -54,7 +57,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
       {d.member.status !== 'active' && d.member.status_reason && <Alert tone="warning" className="mb-4">Status reason: {d.member.status_reason}</Alert>}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
-        <StatCard label="Play Points" value={Number(p.pp_balance ?? 0).toLocaleString()} hint={`${Number(p.pp_lifetime_earned ?? 0).toLocaleString()} lifetime`} />
+        <StatCard label="Suntec+ Points won" value={pointsWon.toLocaleString()} hint={isGuest ? 'Guest — winnings held until claimed' : 'Credited in Capillary'} />
         <StatCard label="Games played" value={String(p.games_played ?? 0)} />
         <StatCard label="Check-ins" value={String(p.checkins_total ?? 0)} hint={d.streaks[0] ? `Streak ${d.streaks[0].current} (best ${d.streaks[0].best})` : undefined} />
         <StatCard label="Missions" value={String(p.missions_completed ?? 0)} />
@@ -86,16 +89,6 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
           <Card className="space-y-5">
             <h2 className="text-base font-semibold">Customer service actions</h2>
             <p className="-mt-3 text-xs text-text-muted">Every action requires a reason and is written to the audit log.</p>
-            <ActionForm action={adjustPoints} submitLabel="Adjust Play Points" inline>
-              <input type="hidden" name="member_id" value={id} />
-              <input type="hidden" name="idem" value={randomUUID()} />
-              <Field id="pp-delta" label="Points (+/−)" className="w-28">
-                <Input id="pp-delta" name="delta" type="number" required />
-              </Field>
-              <Field id="pp-reason" label="Reason" className="min-w-48 flex-1">
-                <Input id="pp-reason" name="reason" required minLength={3} placeholder="Goodwill: app outage" />
-              </Field>
-            </ActionForm>
             <ActionForm action={grantAttempts} submitLabel="Grant attempts" inline>
               <input type="hidden" name="member_id" value={id} />
               <input type="hidden" name="idem" value={randomUUID()} />
@@ -199,18 +192,6 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
       </Section>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Section title="Play Points ledger">
-          <DataTable
-            rows={d.ledger}
-            columns={[
-              { key: 'created_at', label: 'When', format: 'datetime' },
-              { key: 'reason', label: 'Reason' },
-              { key: 'delta', label: 'Change', render: (l) => <span className={l.delta > 0 ? 'text-success' : 'text-danger'}>{l.delta > 0 ? `+${l.delta}` : l.delta}</span> },
-              { key: 'balance_after', label: 'Balance' },
-            ]}
-            empty={{ title: 'No Play Points activity' }}
-          />
-        </Section>
         <Section title="Fraud signals">
           {d.fraud.length === 0 ? (
             <p className="text-sm text-text-muted">None.</p>

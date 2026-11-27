@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 
 /** GET /api/v1/sessions/{id} — one of my game sessions (e.g. resume a quiz). */
 export const GET = route<{ id: string }>(async (req, { id }) => {
-  const { member } = await requireMember(req);
+  const { member } = await requireMember(req, undefined, { guests: true });
   const sid = uuid.parse(id);
   const { data } = await supabaseAdmin().from('game_sessions').select('member_id').eq('id', sid).maybeSingle();
   if (!data || data.member_id !== member.id) fail('NOT_FOUND', 'Session not found');

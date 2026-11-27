@@ -2,23 +2,21 @@
 
 import { usePathname } from 'next/navigation';
 
-type Module = 'admin' | 'portal' | 'embed';
+type Module = 'admin' | 'play';
 
 // White text on each colour meets WCAG AA (contrast ≥ 4.5:1).
 const MODULE_STYLE: Record<Module, string> = {
   admin: 'bg-text',
-  portal: 'bg-primary',
-  embed: 'bg-info',
+  play: 'bg-primary',
 };
 
 function moduleFor(pathname: string): Module | null {
   if (pathname.startsWith('/admin')) return 'admin';
-  if (pathname.startsWith('/embed')) return 'embed';
-  if (pathname.startsWith('/portal') || pathname.startsWith('/q/')) return 'portal';
+  if (pathname.startsWith('/play') || pathname.startsWith('/q/')) return 'play';
   return null;
 }
 
-/** Thin strip with a module tag such as PORTAL-UAT, EMBED-UAT or ADMIN-UAT. */
+/** Thin strip with a module tag: PLAY-UAT (customer Play & Win) or ADMIN-UAT. */
 export function EnvRibbon({ env }: { env: 'local' | 'uat' }) {
   const mod = moduleFor(usePathname() ?? '/');
   const tag = (mod ? `${mod}-${env}` : env).toUpperCase();

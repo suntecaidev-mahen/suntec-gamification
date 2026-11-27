@@ -1,28 +1,48 @@
 import 'server-only';
+import { cookies } from 'next/headers';
 import { createSupabaseServerClient } from '../supabase/server';
 import { supabaseAdmin } from '../supabase/admin';
 import { linkMemberForUser } from '../api/loyalty';
-import { rpc } from '../api/core';
+import { APP_COOKIE, findGuest } from '../api/guest';
 import { isSupabaseConfigured, serverEnv } from '../env';
+
+export type PlayMode = 'app' | 'web';
+export type Viewer = { guest: boolean; firstName: string | null; claimCode: string | null };
 
 export type PlayGateResult =
   | { state: 'unconfigured' }
-  | { state: 'anon' }
+  /** Public link, first visit: the browser needs a guest session (created client-side). */
+  | { state: 'new_visitor' }
+  /** Opened from the Suntec+ app but the session is gone: ask to reopen from the app. */
+  | { state: 'app_session_ended' }
   | { state: 'not_linked'; email: string | null; demo: boolean }
   | { state: 'blocked' }
-  | { state: 'ok'; memberId: string; initial: { pp_balance: number; unread: number; first_name: string | null } };
+  | { state: 'ok'; memberId: string; mode: PlayMode; viewer: Viewer };
 
-/** Resolves the signed-in customer for /portal and /embed (links by email on first visit). */
+/**
+ * Who is playing? In order: a signed-in Suntec+ member (from the app or a web sign-in),
+ * otherwise this browser's guest, otherwise a new visitor.
+ */
 export async function resolvePlayMember(): Promise<PlayGateResult> {
   if (!isSupabaseConfigured()) return { state: 'unconfigured' };
-  const supabase = await createSupabaseServerClient();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return { state: 'anon' };
-  const member = await linkMemberForUser(data.user);
-  if (!member) return { state: 'not_linked', email: data.user.email ?? null, demo: serverEnv().LOYALTY_ADAPTER === 'mock' };
-  if (member.status === 'blocked') return { state: 'blocked' };
-  const s = await rpc<{ pp_balance: number; unread_notifications: number; member: { first_name: string | null } }>('member_summary', { p_member: member.id });
-  return { state: 'ok', memberId: member.id, initial: { pp_balance: Number(s.pp_balance), unread: Number(s.unread_notifications), first_name: s.member.first_name } };
+  const jar = await cookies();
+  const mode: PlayMode = jar.get(APP_COOKIE)?.value === '1' ? 'app' : 'web';
+  const { data } = await (await createSupabaseServerClient()).auth.getUser();
+
+  if (data.user) {
+    const member = await linkMemberForUser(data.user);
+    if (!member) return { state: 'not_linked', email: data.user.email ?? null, demo: serverEnv().LOYALTY_ADAPTER === 'mock' };
+    if (member.status === 'blocked') return { state: 'blocked' };
+    const { data: m } = await supabaseAdmin().from('members').select('first_name').eq('id', member.id).single();
+    return { state: 'ok', memberId: member.id, mode, viewer: { guest: false, firstName: m?.first_name ?? null, claimCode: null } };
+  }
+
+  if (mode === 'app') return { state: 'app_session_ended' };
+  const guest = await findGuest(jar);
+  if (!guest) return { state: 'new_visitor' };
+  if (guest.status === 'blocked') return { state: 'blocked' };
+  const { data: g } = await supabaseAdmin().from('members').select('claim_code').eq('id', guest.id).single();
+  return { state: 'ok', memberId: guest.id, mode: 'web', viewer: { guest: true, firstName: null, claimCode: g?.claim_code ?? null } };
 }
 
 /** DEV/SIT only: demo members from the mock Capillary schema. */

@@ -16,7 +16,6 @@ type Dashboard = {
   checkins_today: number;
   missions_completed_today: number;
   rewards_issued_today: number;
-  pp_issued_today: number;
   reward_cost_today_cents: number;
   active_campaigns: number;
   active_games: number;
@@ -31,8 +30,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const staff = await requireStaff();
   const { denied } = await searchParams;
   const canSee = staff.can('reports.read') || staff.can('campaigns.read');
-  const { data, error } = canSee ? await (await createSupabaseServerClient()).rpc('admin_dashboard') : { data: null, error: null };
+  const db = await createSupabaseServerClient();
+  const [{ data, error }, { data: pts }] = canSee ? await Promise.all([db.rpc('admin_dashboard'), db.rpc('admin_points_summary')]) : [{ data: null, error: null }, { data: null }];
   const d = data as Dashboard | null;
+  const p = (pts ?? { points_awarded_today: 0, points_held: 0, guests_today: 0, guests_claimed_today: 0 }) as { points_awarded_today: number; points_held: number; guests_today: number; guests_claimed_today: number };
 
   return (
     <>
@@ -43,12 +44,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       {d && (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatCard label="Active members today" value={d.members_active_today.toLocaleString()} hint={`${d.members_total.toLocaleString()} total`} />
+            <StatCard label="Active players today" value={d.members_active_today.toLocaleString()} hint={`${Number(p.guests_today).toLocaleString()} new guests · ${Number(p.guests_claimed_today).toLocaleString()} joined & claimed`} />
             <StatCard label="Plays today" value={d.plays_today.toLocaleString()} hint={`${d.wins_today.toLocaleString()} wins`} />
             <StatCard label="Check-ins today" value={d.checkins_today.toLocaleString()} />
             <StatCard label="Missions completed" value={d.missions_completed_today.toLocaleString()} />
             <StatCard label="Rewards issued today" value={d.rewards_issued_today.toLocaleString()} hint={`Cost ${formatMoney(d.reward_cost_today_cents)}`} />
-            <StatCard label="Play Points issued" value={Number(d.pp_issued_today).toLocaleString()} />
+            <StatCard label="Suntec+ Points awarded today" value={Number(p.points_awarded_today).toLocaleString()} hint={`${Number(p.points_held).toLocaleString()} held for guests`} />
             <StatCard label="Open fraud signals" value={d.open_fraud_signals} tone={d.open_fraud_signals > 0 ? 'warning' : 'default'} hint={<Link className="text-primary hover:underline" href="/admin/fraud">Review</Link>} />
             <StatCard label="Failed deliveries" value={d.failed_rewards} tone={d.failed_rewards > 0 ? 'danger' : 'default'} hint={<Link className="text-primary hover:underline" href="/admin/transactions?status=failed">Retry</Link>} />
           </div>

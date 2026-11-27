@@ -67,8 +67,8 @@ transactional email service on a Suntec domain instead.
 
 | Module | Link | How testers use it |
 |---|---|---|
-| Customer portal | `https://<uat-address>/portal` | Sign in with their own email, then pick a demo member |
-| In-app (embed) view | Admin → **In-app test links** | You create a single-use link or QR code (valid 10 min) per tester and member |
+| Play & Win (public link) | `https://<uat-address>/play` | Play straight away as a guest. To test a member, tap **Member sign in**, sign in with their own email, then pick a demo member |
+| Play & Win as in the Suntec+ app | Admin → **In-app test links** | You create a single-use link or QR code (valid 10 min) per tester and member; it opens Play & Win signed in, like the app does |
 | Admin panel | `https://<uat-address>/admin` | Add each tester in **Staff & roles**; they receive a temporary password |
 
 Give each tester a different demo member so their progress stays separate.

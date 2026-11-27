@@ -234,11 +234,6 @@ async function callAdmin(perm: Permission, fn: string, args: Record<string, unkn
   return { ok: true, message, data: (data as Record<string, unknown>) ?? undefined };
 }
 
-export async function adjustPoints(_p: ActionState, fd: FormData) {
-  const member = str(fd, 'member_id');
-  return callAdmin('customers.act', 'admin_adjust_pp', { p_member: member, p_delta: Math.trunc(Number(str(fd, 'delta'))), p_reason: str(fd, 'reason'), p_idem: str(fd, 'idem') || randomUUID() }, `/admin/customers/${member}`, 'Play Points adjusted.');
-}
-
 export async function grantAttempts(_p: ActionState, fd: FormData) {
   const member = str(fd, 'member_id');
   return callAdmin('customers.act', 'admin_grant_attempts', { p_member: member, p_game: str(fd, 'game_id'), p_count: Math.trunc(Number(str(fd, 'count'))), p_reason: str(fd, 'reason'), p_idem: str(fd, 'idem') || randomUUID() }, `/admin/customers/${member}`, 'Attempts granted.');
@@ -298,7 +293,7 @@ export async function createApiClient(_p: ActionState, fd: FormData): Promise<Ac
   const staff = await staffCan('api_clients.manage');
   if (!staff) return denied;
   const name = str(fd, 'name');
-  const scopes = fd.getAll('scopes').map(String).filter((s) => ['sessions:write', 'events:write', 'attempts:write', 'members:read'].includes(s));
+  const scopes = fd.getAll('scopes').map(String).filter((s) => ['sessions:write', 'events:write', 'attempts:write', 'members:read', 'claims:write'].includes(s));
   if (name.length < 3) return { error: 'Give the client a descriptive name.' };
   if (scopes.length === 0) return { error: 'Choose at least one scope.' };
   const key = `sk_live_${randomBytes(24).toString('base64url')}`;
@@ -398,13 +393,10 @@ export async function saveSettings(_p: ActionState, fd: FormData): Promise<Actio
   } catch {
     return { fieldErrors: { timezone: 'Unknown IANA timezone' }, error: 'Please fix the highlighted fields.' };
   }
-  const expiry = str(fd, 'pp_expiry_days');
   const { error } = await (await db())
     .from('app_settings')
     .update({
       timezone: tz,
-      pp_name: str(fd, 'pp_name') || 'Play Points',
-      pp_expiry_days: expiry ? int('pp_expiry_days', 1, 3650) : null,
       max_plays_per_minute: int('max_plays_per_minute', 1, 1000),
       max_members_per_device: int('max_members_per_device', 1, 100),
       auto_flag_on_high_severity: fd.get('auto_flag_on_high_severity') === 'on',
@@ -422,18 +414,15 @@ export async function signOut() {
 }
 
 /* ----------------------------------------------------------------------------
- * UAT / SIT only: in-app (embed) test links
+ * UAT / SIT only: in-app test links
  * Does what the Suntec+ backend does in production (POST /integrations/sessions):
- * creates a single-use handoff code for a member so testers can open /embed on a
+ * creates a single-use handoff code for a member so testers can open Play & Win in app mode on a
  * phone without the native app. Disabled in production.
  * ------------------------------------------------------------------------- */
 const TEST_LINK_ENTRIES: Record<string, string> = {
-  home: '/embed',
-  missions: '/embed/missions',
-  rewards: '/embed/rewards',
-  badges: '/embed/badges',
-  leaderboard: '/embed/leaderboard',
-  inbox: '/embed/inbox',
+  home: '/play',
+  missions: '/play/missions',
+  rewards: '/play/rewards',
 };
 const TEST_LINK_MINUTES = 10;
 
@@ -459,7 +448,7 @@ export async function createEmbedTestLink(_p: ActionState, fd: FormData): Promis
   const { error } = await admin.from('session_handoffs').insert({
     code_hash: createHash('sha256').update(code, 'utf8').digest('hex'),
     member_id: String(memberRef),
-    entry: TEST_LINK_ENTRIES[str(fd, 'entry')] ?? '/embed',
+    entry: TEST_LINK_ENTRIES[str(fd, 'entry')] ?? '/play',
     expires_at: expiresAt.toISOString(),
   });
   if (error) return { error: friendlyDbError(error) };

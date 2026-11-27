@@ -1,15 +1,21 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { cookies } from 'next/headers';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { linkMemberForUser } from '@/lib/api/loyalty';
+import { claimBrowserGuest } from '@/lib/api/guest';
 
 /**
- * Email link landing (portal & admin): supports both PKCE (`?code=`) and
- * token-hash (`?token_hash=&type=`) links from Supabase Auth emails.
+ * Email link landing (Play & Win member sign-in and admin): supports both PKCE (`?code=`)
+ * and token-hash (`?token_hash=&type=`) links from Supabase Auth emails.
+ * A Suntec+ member who played as a guest in this browser gets the held winnings moved
+ * to their account automatically.
  */
 export async function GET(req: NextRequest) {
   const url = req.nextUrl;
   const next = url.searchParams.get('next');
-  const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/portal';
+  const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/play';
+  const admin = safeNext.startsWith('/admin');
   const supabase = await createSupabaseServerClient();
   const code = url.searchParams.get('code');
   const tokenHash = url.searchParams.get('token_hash');
@@ -21,5 +27,16 @@ export async function GET(req: NextRequest) {
   } else if (tokenHash && type) {
     ok = !(await supabase.auth.verifyOtp({ type, token_hash: tokenHash })).error;
   }
-  return NextResponse.redirect(new URL(ok ? safeNext : `${safeNext.startsWith('/admin') ? '/admin/login' : '/portal/login'}?error=link`, url.origin));
+  if (!ok) return NextResponse.redirect(new URL(`${admin ? '/admin/login' : '/play/signin'}?error=link`, url.origin));
+
+  const target = new URL(safeNext, url.origin);
+  if (!admin) {
+    const { data } = await supabase.auth.getUser();
+    const member = data.user ? await linkMemberForUser(data.user).catch(() => null) : null;
+    if (member) {
+      const claimed = await claimBrowserGuest(member.id, await cookies());
+      if (claimed.rewards > 0) target.searchParams.set('claimed', String(claimed.points || claimed.rewards));
+    }
+  }
+  return NextResponse.redirect(target);
 }

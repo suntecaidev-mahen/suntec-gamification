@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 
 /** GET /api/v1/me/rewards — "My Rewards" wallet (vouchers, gifts, privileges, Suntec+ points). */
 export const GET = route(async (req) => {
-  const { member } = await requireMember(req);
+  const { member } = await requireMember(req, undefined, { guests: true });
   const { data, error } = await supabaseAdmin()
     .from('reward_transactions')
     .select('id, ref, reward_id, reward_type, reward_snapshot, quantity, source, status, voucher_code, claim_token, pp_cost, issued_at, expires_at, redeemed_at, created_at')

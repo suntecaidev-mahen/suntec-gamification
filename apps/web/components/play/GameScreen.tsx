@@ -39,7 +39,6 @@ export function GameScreen({ id }: { id: string }) {
 function playLabel(a: Availability, verb: string): string {
   if (a.free_left > 0) return `${verb} — free`;
   if (a.attempts > 0) return `${verb} — use bonus play`;
-  if (a.pp_cost) return `${verb} for ${a.pp_cost} PP`;
   return verb;
 }
 
@@ -47,7 +46,7 @@ function AvailabilityNote({ a }: { a: Availability }) {
   return (
     <p className="text-center text-sm text-text-muted" aria-live="polite">
       {availabilityLabel(a)}
-      {a.pp_cost && a.free_left === 0 && a.attempts === 0 ? ` · You have ${a.pp_balance.toLocaleString()} PP` : ''}
+      {a.reason === 'no_attempts' ? ' · Earn extra plays from missions and check-in streaks' : ''}
     </p>
   );
 }

@@ -16,7 +16,7 @@ export default async function TestLinksPage() {
     <>
       <PageHeader
         title="In-app test links"
-        description="Open the in-app (embed) experience on any phone without the Suntec+ app. This does what the Suntec+ backend does in production: it signs the member in with a single-use link."
+        description="Open Play & Win exactly as the Suntec+ app does (member signed in automatically) on any phone, without the app. This does what the Suntec+ backend does in production: it signs the member in with a single-use link."
       />
       {production ? (
         <Alert tone="info">Test links are disabled in production.</Alert>
@@ -53,10 +53,7 @@ export default async function TestLinksPage() {
               <Select id="entry" name="entry" defaultValue="home">
                 <option value="home">Home (games and check-in)</option>
                 <option value="missions">Missions</option>
-                <option value="rewards">Rewards</option>
-                <option value="badges">Badges</option>
-                <option value="leaderboard">Leaderboard</option>
-                <option value="inbox">Inbox</option>
+                <option value="rewards">My rewards</option>
               </Select>
             </Field>
           </ActionForm>

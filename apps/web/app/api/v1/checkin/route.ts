@@ -6,13 +6,13 @@ import { deliverNow } from '@/lib/api/outbox';
 
 /** GET /api/v1/checkin — streak, ladder and whether I have checked in today. */
 export const GET = route(async (req) => {
-  const { member } = await requireMember(req);
+  const { member } = await requireMember(req, undefined, { guests: true });
   return ok(await rpc('checkin_status', { p_member: member.id, p_program: null }));
 });
 
 /** POST /api/v1/checkin — daily check-in (once per business day, SGT). Safe to retry. */
 export const POST = route(async (req) => {
-  const { member } = await requireMember(req, { key: 'checkin', limit: 20 });
+  const { member } = await requireMember(req, { key: 'checkin', limit: 20 }, { guests: true });
   const body = await parseJson(req, checkinBodySchema);
   const result = await rpc<{ rewards?: { id?: string }[] }>('checkin', {
     p_member: member.id,

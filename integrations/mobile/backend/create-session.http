@@ -53,3 +53,10 @@ X-API-Key: {{key}}
 ### 6) Scheduler (every 1–5 min): maintenance + Capillary/VMS/push delivery
 POST {{host}}/api/v1/jobs/tick
 Authorization: Bearer replace-with-CRON_SECRET
+
+### 7) A guest just signed up in the Suntec+ app with a Play & Win claim code → move their held winnings
+POST {{host}}/api/v1/integrations/members/SUN-00010003/claims
+X-API-Key: {{key}}
+Content-Type: application/json
+
+{ "code": "7K3M-Q9XD" }

@@ -33,6 +33,7 @@
 | 0014 | **Engine**: secure draws + fallback, reward allocation (inventory locks, code pools, caps), Play Points / attempt ledgers, check-in streaks, missions, badges, leaderboards (+ period close), notifications, outbox, idempotency, rate limits, event ingest, QR scans, read models, mock Capillary wrappers, permission-checked `admin_*` RPCs |
 | 0015 | Atomic admin editors: `admin_save_outcomes` (100% rule on the final state) and `admin_save_question` |
 | 0016 | Portal support: demo-member picker for the mock loyalty system |
+| 0017 | **Guest play**: guests on the public link, winnings held under a claim code (30 days) and moved to a Suntec+ member on claim; Suntec+ Points only (Play Points and the catalogue retired); `admin_points_summary` |
 
 ## Local validation (no Supabase project needed)
 ```bash
