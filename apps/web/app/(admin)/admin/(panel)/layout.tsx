@@ -4,7 +4,7 @@ import { Alert } from '@suntec/ui';
 import { requireStaff } from '@/lib/admin/session';
 import { signOut } from '@/lib/admin/actions';
 import { Sidebar, type NavGroup } from '@/components/admin/Sidebar';
-import { isSupabaseConfigured } from '@/lib/env';
+import { appEnv, isSupabaseConfigured } from '@/lib/env';
 
 export const metadata: Metadata = { title: { default: 'Admin', template: '%s · Play & Win Admin' } };
 export const dynamic = 'force-dynamic';
@@ -68,7 +68,7 @@ export default async function AdminPanelLayout({ children }: { children: React.R
   const groups: NavGroup[] = NAV.map((g) => ({ title: g.title, items: g.items.filter((i) => i.perm.some((p) => staff.can(p))) })).filter((g) => g.items.length > 0);
   return (
     <div className="min-h-dvh bg-surface-muted lg:flex">
-      <Sidebar groups={groups} user={{ name: staff.displayName, roles: staff.roles.map((r) => r.replace(/_/g, ' ')).join(', ') }} signOut={signOut} />
+      <Sidebar groups={groups} user={{ name: staff.displayName, roles: staff.roles.map((r) => r.replace(/_/g, ' ')).join(', ') }} signOut={signOut} envTag={appEnv() === 'production' ? null : appEnv() === 'uat' ? 'UAT' : 'LOCAL'} />
       <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-8">
         {children}
       </main>

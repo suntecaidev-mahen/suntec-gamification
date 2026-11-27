@@ -8,7 +8,7 @@ import { BrandInline } from '@/components/Brand';
 
 export type NavGroup = { title: string; items: { href: string; label: string }[] };
 
-export function Sidebar({ groups, user, signOut }: { groups: NavGroup[]; user: { name: string; roles: string }; signOut: () => Promise<void> }) {
+export function Sidebar({ groups, user, signOut, envTag = null }: { groups: NavGroup[]; user: { name: string; roles: string }; signOut: () => Promise<void>; envTag?: string | null }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const isActive = (href: string) => (href === '/admin' ? pathname === '/admin' : pathname === href || pathname.startsWith(`${href}/`));
@@ -27,6 +27,11 @@ export function Sidebar({ groups, user, signOut }: { groups: NavGroup[]; user: {
       >
         <Link href="/admin" className="mb-6 block px-3" onClick={() => setOpen(false)}>
           <BrandInline size={36} subtitle="Admin control panel" />
+          {envTag && (
+            <span className="mt-2 inline-block rounded border border-warning/40 bg-warning-subtle px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-warning" title="Test environment — not the live system">
+              {envTag}
+            </span>
+          )}
         </Link>
         <nav aria-label="Admin">
           {groups.map((g) => (

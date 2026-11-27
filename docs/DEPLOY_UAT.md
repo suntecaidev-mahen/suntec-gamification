@@ -9,7 +9,8 @@ deployed the same way later, from a **separate** Supabase project and Vercel pro
 | Database | Supabase project used so far (with demo data) | New, empty Supabase project (no `seed.sql`) |
 | `NEXT_PUBLIC_APP_ENV` | `uat` | `production` |
 | `LOYALTY_ADAPTER` | `mock` | `capillary` |
-| Test ribbon, demo-member picker, in-app test links | On | Off |
+| Web address | e.g. `suntec-play-uat.vercel.app` | Suntec domain, e.g. `play.sunteccity.com.sg` |
+| "UAT" tag in the admin menu, demo-member picker, in-app test links | On | Off |
 
 ## 1. Create the Vercel project
 
