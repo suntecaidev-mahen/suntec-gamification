@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { Card } from '@suntec/ui';
-import { isSupabaseConfigured } from '@/lib/env';
+import { appEnv, isSupabaseConfigured } from '@/lib/env';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { BrandHero } from '@/components/Brand';
 import { SetPasswordForm } from './SetPasswordForm';
@@ -32,7 +32,7 @@ export default async function SetPasswordPage({ searchParams }: { searchParams: 
           <p className="mb-4 text-sm text-text-muted">
             Signed in as <strong className="text-text">{data.user.email}</strong>
           </p>
-          <SetPasswordForm />
+          <SetPasswordForm strict={appEnv() === 'production'} />
         </Card>
       </div>
     </main>
