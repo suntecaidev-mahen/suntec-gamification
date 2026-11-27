@@ -16,3 +16,14 @@ update public.game_outcomes o
     ('22000000-0000-4000-8000-000000000002'::uuid, '#FFFFFF', '#FFFFFF', '#C2410C')   -- $5 Dining → white, orange text
   ) as v(id, old_color, new_color, new_text)
  where o.id = v.id and upper(coalesce(o.display->>'color', '')) = v.old_color;
+
+-- Streak ladder labels from the retired Play Points wording (demo data, only if unchanged)
+update public.checkin_streak_rules r
+   set label = v.new_label
+  from (values
+    ('+20 PP', '+20 Suntec+ Points'),
+    ('+100 PP + Bonus Spin', '+100 Suntec+ Points + Bonus Spin'),
+    ('+200 PP + 500 Suntec+ Points', '+700 Suntec+ Points'),
+    ('+200 PP', '+200 Suntec+ Points')
+  ) as v(old_label, new_label)
+ where r.label = v.old_label;
