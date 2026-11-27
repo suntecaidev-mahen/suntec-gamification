@@ -9,7 +9,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "node ../../scripts/vitest.mjs run --passWithNoTests"
   },
   "dependencies": {
     "zod": "^4.6.7"
