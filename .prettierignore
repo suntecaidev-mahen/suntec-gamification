@@ -1,0 +1,6 @@
+node_modules
+.next
+dist
+coverage
+supabase/setup_all.sql
+packages/types/src/database.ts

@@ -1,0 +1,29 @@
+{
+  "name": "suntec-gamification",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Spin & Win — gamification module for the Suntec+ loyalty app",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "npm run dev -w @suntec/web",
+    "build": "npm run build -w @suntec/web",
+    "start": "npm run start -w @suntec/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "format": "prettier --write .",
+    "db:bundle": "node scripts/build-setup-sql.mjs",
+    "db:types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_ID\" --schema public > packages/types/src/database.ts",
+    "check:contrast": "node scripts/check-contrast.mjs"
+  },
+  "devDependencies": {
+    "prettier": "^3.10.1",
+    "typescript": "~5.9.3"
+  }
+}
